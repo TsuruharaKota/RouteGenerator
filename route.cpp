@@ -62,13 +62,14 @@ class RouteGenerator{
                std::pow(u[1], 3), std::pow(u[1], 2), u[1], 1,
                std::pow(u[2], 3), std::pow(u[2], 2), u[2], 1,
                std::pow(u[3], 3), std::pow(u[3], 2), u[3], 1;
-          Eigen::Matrix<float, 2, 4> b;
+          Eigen::Matrix<float, 4, 2> b;
           b << route[i    ].first, route[i    ].second,
                route[i + 1].first, route[i + 1].second,
                route[i + 2].first, route[i + 2].second,
                route[i + 3].first, route[i + 3].second;
-          Eigen::ColPivHouseholderQR<Eigen::Matrix4f> dec(A);
-          Eigen::Matrix<float, 2, 4> x = dec.solve(b);
+          //Eigen::ColPivHouseholderQR<Eigen::Matrix4f> dec(A);
+          //Eigen::Matrix<float, 2, 4> x = dec.solve(b);
+          Eigen::Matrix<float, 4, 2> x = A.colPivHouseholderQr().solve(b);
           for(int j = u[0]; j <= u[3]; j+= (u[3] - u[0]) / 10){
             route_goal.push_back(route_pair(x(0, 0) * pow(j, 3) + x(0, 1) * pow(j, 2) + x(0, 2) * j + x(0, 3), 
                                  x(1, 0) * pow(j, 3) + x(1, 1) * pow(j, 2) + x(1, 2) * j + x(1, 3)));  
