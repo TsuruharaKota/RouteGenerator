@@ -70,10 +70,9 @@ class RouteGenerator{
                route[i + 3].first, route[i + 3].second;
           Eigen::ColPivHouseholderQR<Eigen::Matrix4f> dec(A);
           Eigen::Matrix<float, 4, 2> x = A.colPivHouseholderQr().solve(b);
-          for(int j = u[0]; j <= u[3]; j+= (u[3] - u[0]) / 10){
-            route_goal.push_back(route_pair(x(0, 0) * pow(j, 3) + x(0, 1) * pow(j, 2) + x(0, 2) * j + x(0, 3), 
-                                 x(1, 0) * pow(j, 3) + x(1, 1) * pow(j, 2) + x(1, 2) * j + x(1, 3))); 
-            std::cout << "NO" << std::endl; 
+          for(float j = u[0]; j <= u[3]; j+= (u[3] - u[0]) / 10){
+              route_goal.push_back(route_pair(x(0, 0) * pow(u[0], 3) + x(1, 0) * pow(u[0], 2) + x(2, 0) * u[0] + x(3, 0), 
+                               x(0, 1) * pow(u[0], 3) + x(1, 1) * pow(u[0], 2) + x(2, 1) * u[0] + x(3, 1))); 
           }
           i += 4;
         }
@@ -107,13 +106,13 @@ std::vector<route_pair> routeInit(){
       point.push_back(route_pair(0.0f, 1.0f));
       point.push_back(route_pair(0.0f, 2.0f));
       point.push_back(route_pair(0.0f, 3.0f));
-      point.push_back(route_pair(0.0f, 4.0f));
-      point.push_back(route_pair(0.0f, 5.0f));
-      point.push_back(route_pair(0.0f, 6.0f));
-      point.push_back(route_pair(0.0f, 7.0f));
-      point.push_back(route_pair(0.0f, 8.0f));
-      point.push_back(route_pair(0.0f, 9.0f));
-      point.push_back(route_pair(0.0f, 10.0f));
+      point.push_back(route_pair(2.0f, 4.0f));
+      point.push_back(route_pair(3.0f, 5.0f));
+      point.push_back(route_pair(4.0f, 6.0f));
+      point.push_back(route_pair(4.0f, 7.0f));
+      point.push_back(route_pair(4.0f, 8.0f));
+      point.push_back(route_pair(4.0f, 9.0f));
+      point.push_back(route_pair(4.0f, 10.0f));
       break;
     case Coat::red2:
       point.push_back(route_pair(0.0f, 1.0f));
