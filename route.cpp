@@ -7,6 +7,7 @@
 #include<string>
 #include<Eigen/Dense>
 #include<vector>
+#include<cmath>
 using route_pair = std::pair<float, float>;
 using route_tuple = std::tuple<float, float, unsigned int>;
 template<typename T, int N>
@@ -67,12 +68,12 @@ class RouteGenerator{
                route[i + 1].first, route[i + 1].second,
                route[i + 2].first, route[i + 2].second,
                route[i + 3].first, route[i + 3].second;
-          //Eigen::ColPivHouseholderQR<Eigen::Matrix4f> dec(A);
-          //Eigen::Matrix<float, 2, 4> x = dec.solve(b);
+          Eigen::ColPivHouseholderQR<Eigen::Matrix4f> dec(A);
           Eigen::Matrix<float, 4, 2> x = A.colPivHouseholderQr().solve(b);
           for(int j = u[0]; j <= u[3]; j+= (u[3] - u[0]) / 10){
             route_goal.push_back(route_pair(x(0, 0) * pow(j, 3) + x(0, 1) * pow(j, 2) + x(0, 2) * j + x(0, 3), 
-                                 x(1, 0) * pow(j, 3) + x(1, 1) * pow(j, 2) + x(1, 2) * j + x(1, 3)));  
+                                 x(1, 0) * pow(j, 3) + x(1, 1) * pow(j, 2) + x(1, 2) * j + x(1, 3))); 
+            std::cout << "NO" << std::endl; 
           }
           i += 4;
         }
@@ -100,7 +101,7 @@ enum class Coat{
 };
 template<Coat color>
 std::vector<route_pair> routeInit(){
-  std::vector<route_pair> point(10);
+  std::vector<route_pair> point;
   switch(color){
     case Coat::red1:
       point.push_back(route_pair(0.0f, 1.0f));
