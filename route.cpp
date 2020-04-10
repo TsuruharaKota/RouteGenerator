@@ -82,9 +82,12 @@ class RouteGenerator{
               route_goal.push_back(route_pair(x(0, 0) * pow(j, 3) + x(1, 0) * pow(j, 2) + x(2, 0) * j + x(3, 0), 
                                x(0, 1) * pow(j, 3) + x(1, 1) * pow(j, 2) + x(2, 1) * j + x(3, 1))); 
           }
-          for(auto& point : route_goal){
-            std::cout << point.first << ", " << point.second << std::endl;
-          }
+          std::cout << "A = \n" << A << std::endl;
+          std::cout << "b = \n" << b << std::endl;
+          std::cout << "x = \n" << x << std::endl;
+          //for(auto& point : route_goal){
+          //  std::cout << point.first << ", " << point.second << std::endl;
+          //}
           std::cout << "--------------------" << std::endl;
           //for(int j = 0; j < 4; ++j){
           //  std::cout << u[j] << std::endl;
@@ -146,34 +149,44 @@ std::vector<route_pair> routeInit(){
       point.push_back(route_pair(2.5f, 10.0f));
       break;
     case Coat::blue1:
-      point.push_back(route_pair(0.0f, 1.0f));
-      point.push_back(route_pair(0.0f, 2.0f));
-      point.push_back(route_pair(0.0f, 3.0f));
-      point.push_back(route_pair(0.0f, 4.0f));
-      point.push_back(route_pair(0.0f, 5.0f));
-      point.push_back(route_pair(0.0f, 6.0f));
-      point.push_back(route_pair(0.0f, 7.0f));
-      point.push_back(route_pair(0.0f, 8.0f));
-      point.push_back(route_pair(0.0f, 9.0f));
-      point.push_back(route_pair(0.0f, 10.0f));
+      point.push_back(route_pair(18.0f, 6.0f));
+      point.push_back(route_pair(45.0f, 6.0f));
+      point.push_back(route_pair(50.0f, 7.0f));
+      point.push_back(route_pair(53.0f, 10.5f));
+      point.push_back(route_pair(55.0f, 15.0f));
+      point.push_back(route_pair(55.0f, 30.0f));
+      point.push_back(route_pair(55.0f, 45.0f));
+      point.push_back(route_pair(55.0f, 60.0f));
+      point.push_back(route_pair(55.0f, 75.0f));
+      point.push_back(route_pair(55.0f, 100.0f));
       break;
     case Coat::blue2:
-      point.push_back(route_pair(0.0f, 1.0f));
-      point.push_back(route_pair(0.0f, 2.0f));
-      point.push_back(route_pair(0.0f, 3.0f));
-      point.push_back(route_pair(0.0f, 4.0f));
-      point.push_back(route_pair(0.0f, 5.0f));
-      point.push_back(route_pair(0.0f, 6.0f));
-      point.push_back(route_pair(0.0f, 7.0f));
-      point.push_back(route_pair(0.0f, 8.0f));
-      point.push_back(route_pair(0.0f, 9.0f));
-      point.push_back(route_pair(0.0f, 10.0f));
+      point.push_back(route_pair(30, 10));
+      point.push_back(route_pair(50, 10));
+      point.push_back(route_pair(200, 10));
+      point.push_back(route_pair(225, 15));
+      point.push_back(route_pair(250, 90));
+      point.push_back(route_pair(400, 100));
+      point.push_back(route_pair(400, 200));
+      point.push_back(route_pair(400, 300));
+      point.push_back(route_pair(400, 400));
+      point.push_back(route_pair(400, 500));
+      /*point.push_back(route_pair(0.3f, 0.1f));
+      point.push_back(route_pair(0.5f, 0.1f));
+      point.push_back(route_pair(1.0f, 0.1f));
+      point.push_back(route_pair(2.0f, 0.3f));
+      point.push_back(route_pair(2.5f, 0.5f));
+      point.push_back(route_pair(4.0f, 1.0f));
+      point.push_back(route_pair(4.0f, 2.0f));
+      point.push_back(route_pair(4.0f, 3.0f));
+      point.push_back(route_pair(4.0f, 4.0f));
+      point.push_back(route_pair(4.0f, 5.0f));*/
       break;
   }
   return point;
 }
 int main(){
-  std::vector<route_pair> route = routeInit<Coat::red2>();
+  std::vector<route_pair> route = routeInit<Coat::blue1>();
   RouteGenerator<float, 90000> routeObject(route);
   routeObject.routeMain();
 }
