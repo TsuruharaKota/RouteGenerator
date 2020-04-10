@@ -13,7 +13,7 @@ using route_tuple = std::tuple<float, float, unsigned int>;
 template<typename T, int N>
 class RouteGenerator{
   public:
-    RouteGenerator(std::vector<route_pair>& passing_point):route(passing_point){}
+    RouteGenerator(std::vector<route_pair>&& passing_point):route(passing_point){}
     void routeMain(){
       try{
         if((this -> generateRoute()) == false)throw 1;
@@ -58,9 +58,6 @@ class RouteGenerator{
           for(int j = 0; j < 4; ++j){
             if(j == 0){
               u[j] = 0;
-              //if(i == 0) u[j] = 0;
-              //else u[j] = std::sqrt(std::pow(route[i + j].first - route[i + j - 1].first, 2) + 
-              //            std::pow(route[i + j].second - route[i + j - 1].second, 2));
             }else{
               u[j] = u[j - 1] + std::sqrt(std::pow(route[i + j].first - route[i + j - 1].first, 2) + 
                      std::pow(route[i + j].second - route[i + j - 1].second, 2));
@@ -85,17 +82,7 @@ class RouteGenerator{
           std::cout << "A = \n" << A << std::endl;
           std::cout << "b = \n" << b << std::endl;
           std::cout << "x = \n" << x << std::endl;
-          //for(auto& point : route_goal){
-          //  std::cout << point.first << ", " << point.second << std::endl;
-          //}
           std::cout << "--------------------" << std::endl;
-          //for(int j = 0; j < 4; ++j){
-          //  std::cout << u[j] << std::endl;
-          //}
-          //std::cout << "----------------" << std::endl;
-          //std::cout << A << std::endl;
-          //std::cout << "----------------" << std::endl;
-          //std::cout << b << std::endl;
           i += 2;
         }
       }
@@ -171,22 +158,11 @@ std::vector<route_pair> routeInit(){
       point.push_back(route_pair(400, 300));
       point.push_back(route_pair(400, 400));
       point.push_back(route_pair(400, 500));
-      /*point.push_back(route_pair(0.3f, 0.1f));
-      point.push_back(route_pair(0.5f, 0.1f));
-      point.push_back(route_pair(1.0f, 0.1f));
-      point.push_back(route_pair(2.0f, 0.3f));
-      point.push_back(route_pair(2.5f, 0.5f));
-      point.push_back(route_pair(4.0f, 1.0f));
-      point.push_back(route_pair(4.0f, 2.0f));
-      point.push_back(route_pair(4.0f, 3.0f));
-      point.push_back(route_pair(4.0f, 4.0f));
-      point.push_back(route_pair(4.0f, 5.0f));*/
       break;
   }
   return point;
 }
 int main(){
-  std::vector<route_pair> route = routeInit<Coat::blue1>();
-  RouteGenerator<float, 90000> routeObject(route);
+  RouteGenerator<float, 90000> routeObject(routeInit<Coat::blue1>());
   routeObject.routeMain();
 }
