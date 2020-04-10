@@ -29,6 +29,13 @@ class RouteGenerator{
             std::cout << "error occurred" << std::endl;
         }
       }
+      for(auto& point : route_goal){
+        std::cout << point.first << std::endl;
+      }
+      std::cout << "-------------------------" << std::endl;
+      for(auto& point : route_goal){
+        std::cout << point.second << std::endl;
+      }
     }
   private:
     bool generateRoute(){
@@ -50,9 +57,10 @@ class RouteGenerator{
           std::array<float, 4> u;
           for(int j = 0; j < 4; ++j){
             if(j == 0){
-              if(i == 0) u[j] = 0;
-              else u[j] = std::sqrt(std::pow(route[i + j].first - route[i + j - 1].first, 2) + 
-                          std::pow(route[i + j].second - route[i + j - 1].second, 2));
+              u[j] = 0;
+              //if(i == 0) u[j] = 0;
+              //else u[j] = std::sqrt(std::pow(route[i + j].first - route[i + j - 1].first, 2) + 
+              //            std::pow(route[i + j].second - route[i + j - 1].second, 2));
             }else{
               u[j] = u[j - 1] + std::sqrt(std::pow(route[i + j].first - route[i + j - 1].first, 2) + 
                      std::pow(route[i + j].second - route[i + j - 1].second, 2));
@@ -71,10 +79,21 @@ class RouteGenerator{
           Eigen::ColPivHouseholderQR<Eigen::Matrix4f> dec(A);
           Eigen::Matrix<float, 4, 2> x = A.colPivHouseholderQr().solve(b);
           for(float j = u[0]; j <= u[3]; j+= (u[3] - u[0]) / 10){
-              route_goal.push_back(route_pair(x(0, 0) * pow(u[0], 3) + x(1, 0) * pow(u[0], 2) + x(2, 0) * u[0] + x(3, 0), 
-                               x(0, 1) * pow(u[0], 3) + x(1, 1) * pow(u[0], 2) + x(2, 1) * u[0] + x(3, 1))); 
+              route_goal.push_back(route_pair(x(0, 0) * pow(j, 3) + x(1, 0) * pow(j, 2) + x(2, 0) * j + x(3, 0), 
+                               x(0, 1) * pow(j, 3) + x(1, 1) * pow(j, 2) + x(2, 1) * j + x(3, 1))); 
           }
-          i += 4;
+          for(auto& point : route_goal){
+            std::cout << point.first << ", " << point.second << std::endl;
+          }
+          std::cout << "--------------------" << std::endl;
+          //for(int j = 0; j < 4; ++j){
+          //  std::cout << u[j] << std::endl;
+          //}
+          //std::cout << "----------------" << std::endl;
+          //std::cout << A << std::endl;
+          //std::cout << "----------------" << std::endl;
+          //std::cout << b << std::endl;
+          i += 2;
         }
       }
       int devide_time = N / 500;
@@ -103,28 +122,28 @@ std::vector<route_pair> routeInit(){
   std::vector<route_pair> point;
   switch(color){
     case Coat::red1:
-      point.push_back(route_pair(0.0f, 1.0f));
-      point.push_back(route_pair(0.0f, 2.0f));
-      point.push_back(route_pair(0.0f, 3.0f));
-      point.push_back(route_pair(2.0f, 4.0f));
-      point.push_back(route_pair(3.0f, 5.0f));
+      point.push_back(route_pair(1.0f, 0.1f));
+      point.push_back(route_pair(2.0f, 0.3f));
+      point.push_back(route_pair(2.5f, 0.5f));
+      point.push_back(route_pair(4.0f, 1.0f));
+      point.push_back(route_pair(4.0f, 2.0f));
+      point.push_back(route_pair(4.0f, 3.0f));
+      point.push_back(route_pair(4.0f, 4.0f));
+      point.push_back(route_pair(4.0f, 5.0f));
       point.push_back(route_pair(4.0f, 6.0f));
       point.push_back(route_pair(4.0f, 7.0f));
-      point.push_back(route_pair(4.0f, 8.0f));
-      point.push_back(route_pair(4.0f, 9.0f));
-      point.push_back(route_pair(4.0f, 10.0f));
       break;
     case Coat::red2:
       point.push_back(route_pair(0.0f, 1.0f));
       point.push_back(route_pair(0.0f, 2.0f));
       point.push_back(route_pair(0.0f, 3.0f));
       point.push_back(route_pair(0.0f, 4.0f));
-      point.push_back(route_pair(0.0f, 5.0f));
-      point.push_back(route_pair(0.0f, 6.0f));
-      point.push_back(route_pair(0.0f, 7.0f));
-      point.push_back(route_pair(0.0f, 8.0f));
-      point.push_back(route_pair(0.0f, 9.0f));
-      point.push_back(route_pair(0.0f, 10.0f));
+      point.push_back(route_pair(1.0f, 5.0f));
+      point.push_back(route_pair(2.0f, 6.0f));
+      point.push_back(route_pair(2.5f, 7.0f));
+      point.push_back(route_pair(2.5f, 8.0f));
+      point.push_back(route_pair(2.5f, 9.0f));
+      point.push_back(route_pair(2.5f, 10.0f));
       break;
     case Coat::blue1:
       point.push_back(route_pair(0.0f, 1.0f));
@@ -154,7 +173,7 @@ std::vector<route_pair> routeInit(){
   return point;
 }
 int main(){
-  std::vector<route_pair> route = routeInit<Coat::red1>();
+  std::vector<route_pair> route = routeInit<Coat::red2>();
   RouteGenerator<float, 90000> routeObject(route);
   routeObject.routeMain();
 }
