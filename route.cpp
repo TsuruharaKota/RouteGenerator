@@ -8,6 +8,7 @@
 #include<Eigen/Dense>
 #include<vector>
 #include<cmath>
+#include<iomanip>
 using route_pair = std::pair<float, float>;
 using route_tuple = std::tuple<float, float, unsigned int>;
 template<typename T, int N>
@@ -17,7 +18,7 @@ class RouteGenerator{
     void routeMain(){
       try{
         if((this -> generateRoute()) == false)throw 1;
-        //if((this -> fileSet()) == false)throw 2;
+        if((this -> fileSet()) == false)throw 2;
       }
       catch (int error_num){
         switch(error_num){
@@ -29,13 +30,9 @@ class RouteGenerator{
             std::cout << "error occurred" << std::endl;
         }
       }
-      for(auto& point : route_goal){
-        std::cout << point.first << std::endl;
-      }
+      for(auto& point : route_goal){std::cout << point.first << std::endl;}
       std::cout << "-------------------------" << std::endl;
-      for(auto& point : route_goal){
-        std::cout << point.second << std::endl;
-      }
+      for(auto& point : route_goal){std::cout << point.second << std::endl;}
     }
   private:
     bool generateRoute(){
@@ -43,22 +40,23 @@ class RouteGenerator{
         if((route[i].first != route[i + 1].first) && (route[i].second == route[i + 1].second)){
           //X Linear interpolation
           float devide_x = (route[i + 1].first - route[i].first) / 5;
-          for(int j = 0; j < 5; ++j){
-            route_goal.push_back(route_pair(route[i].first + (devide_x * j), route[i].second));
-          }
+          for(int j = 0; j < 5; ++j){route_goal.push_back(route_pair(route[i].first + (devide_x * j), route[i].second));}
         }else if((route[i].first == route[i + 1].first) && (route[i].second != route[i + 1].second)){
           //Y Linear interpolation
           float devide_y = (route[i + 1].second - route[i].second) / 5;
-          for(int j = 0; j < 5; ++j){
-            route_goal.push_back(route_pair(route[i].first, route[i].second + (devide_y * j)));
-          }
+          for(int j = 0; j < 5; ++j){route_goal.push_back(route_pair(route[i].first, route[i].second + (devide_y * j)));}
         }else{
           //Curve interpolation
           std::array<float, 4> u;
+          //auto uCal = [](std::array<float, 4> &_u, int k, int l) -> float{
+          //  return  _u[l - 1] + std::sqrt(std::pow(route[k + l].first - route[k + l - 1].first, 2) + 
+          //          std::pow(route[k + l].second - route[k + l - 1].second, 2));
+          //};
           for(int j = 0; j < 4; ++j){
             if(j == 0){
               u[j] = 0;
             }else{
+              //u[j] = uCal(u, i, j);
               u[j] = u[j - 1] + std::sqrt(std::pow(route[i + j].first - route[i + j - 1].first, 2) + 
                      std::pow(route[i + j].second - route[i + j - 1].second, 2));
             }
@@ -79,10 +77,6 @@ class RouteGenerator{
               route_goal.push_back(route_pair(x(0, 0) * pow(j, 3) + x(1, 0) * pow(j, 2) + x(2, 0) * j + x(3, 0), 
                                x(0, 1) * pow(j, 3) + x(1, 1) * pow(j, 2) + x(2, 1) * j + x(3, 1))); 
           }
-          std::cout << "A = \n" << A << std::endl;
-          std::cout << "b = \n" << b << std::endl;
-          std::cout << "x = \n" << x << std::endl;
-          std::cout << "--------------------" << std::endl;
           i += 2;
         }
       }
@@ -92,9 +86,11 @@ class RouteGenerator{
       return true;
     }
     bool fileSet(){
-      //std::ofstream writeFile;
-      //writeFile.open("RouteGenerator/Test.txt");
-      //writeFile <<;
+      std::ofstream outputFile("Test.txt");
+      for(auto &point : route_goal){
+        outputFile << std::fixed << std::setprecision(5) << point.first << " " << point.second << "\n";
+      }
+      outputFile.close();
     }
     float Timer();
     float time;
