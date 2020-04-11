@@ -23,16 +23,13 @@ class RouteGenerator{
       catch (int error_num){
         switch(error_num){
           case 1:
-            std::cout << "error in generateRoute function" << std::endl;
+            std::cerr << "error in generateRoute function" << std::endl;
           case 2:
-            std::cout << "error in fileSet function" << std::endl;
+            std::cerr << "error in fileSet function" << std::endl;
           default:
-            std::cout << "error occurred" << std::endl;
+            std::cerr << "error occurred" << std::endl;
         }
       }
-      for(auto& point : route_goal){std::cout << point.first << std::endl;}
-      std::cout << "-------------------------" << std::endl;
-      for(auto& point : route_goal){std::cout << point.second << std::endl;}
     }
   private:
     bool generateRoute(){
@@ -91,6 +88,7 @@ class RouteGenerator{
         outputFile << std::fixed << std::setprecision(5) << point.first << " " << point.second << "\n";
       }
       outputFile.close();
+      return true;
     }
     float Timer();
     float time;
