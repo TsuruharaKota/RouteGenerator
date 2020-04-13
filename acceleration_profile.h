@@ -23,10 +23,16 @@ class accelProfile{
         }
     private:
         constexpr float calDistance(){
-            //距離計測を追加
+            float temp_distance{};
+            for(int i = 0; i < 100; ++i){
+                float x = [i];
+                float y = [i];
+                temp_distance += std::sqrt((x * x) + (y * y));
+            }
+            return temp_distance;
         }
         vector<route_pair> dist;
-        std::vector<route_tuple>
+        std::vector<route_tuple> route;
         constexpr float TARGET_VEL;
         constexpr float ACCEL; 
         constexpr float VEL_MAX;
