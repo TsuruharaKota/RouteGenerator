@@ -15,7 +15,7 @@ template<typename T, int N>
 class RouteGenerator{
   public:
     RouteGenerator(std::vector<route_pair>&& passing_point):route(passing_point){}
-    void routeMain(){
+    void operator()(){
       try{
         if((this -> generateRoute()) == false)throw 1;
         if((this -> fileSet()) == false)throw 2;
@@ -35,11 +35,11 @@ class RouteGenerator{
     bool generateRoute(){
       for(int i = 0; i < 9; ++i){
         if((route[i].first != route[i + 1].first) && (route[i].second == route[i + 1].second)){
-          //X Linear interpolation
+          //----------X Linear interpolation----------//
           float devide_x = (route[i + 1].first - route[i].first) / 5;
           for(int j = 0; j < 5; ++j){route_goal.push_back(route_pair(route[i].first + (devide_x * j), route[i].second));}
         }else if((route[i].first == route[i + 1].first) && (route[i].second != route[i + 1].second)){
-          //Y Linear interpolation
+          //----------Y Linear interpolation----------//
           float devide_y = (route[i + 1].second - route[i].second) / 5;
           for(int j = 0; j < 5; ++j){route_goal.push_back(route_pair(route[i].first, route[i].second + (devide_y * j)));}
         }else{
@@ -158,5 +158,5 @@ std::vector<route_pair> routeInit(){
 }
 int main(){
   RouteGenerator<float, 90000> routeObject(routeInit<Coat::blue1>());
-  routeObject.routeMain();
+  routeObject();
 }
