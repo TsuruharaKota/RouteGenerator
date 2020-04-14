@@ -11,6 +11,12 @@
 #include<iomanip>
 using route_pair = std::pair<float, float>;
 using route_tuple = std::tuple<float, float, unsigned int>;
+enum class Coat{
+  red1,
+  red2,
+  blue1,
+  blue2
+};
 template<typename T, int N>
 class RouteGenerator{
   public:
@@ -135,26 +141,34 @@ class accelProfile{
         constexpr float VEL_MAX;
         constexpr float VEL_MIN;
 };
-template<typename T>
+template<typename T, long long N>
 class TargetPosition{
   public:
-    TargetPosition();
-    void operator()(float time){
-      setTime(T);
+    TargetPosition(std::vector<route_tuple>& _point) : point(_point){
+      targetProfile = new RouteGenerator(_point);
+    }
+    route_pair operator()(float time){
+      //タイマー処理
+      if(targetQueue.empty() == false){
+
+      }else{
+        //速度が0になるような処理
+      }
     }
   private:
     void setQueue(){
+      //目標位置をキューごとで管理する
+      for(int i = 0; i < 10; ++i){
+        if(std::tuple::get<2>(point[i]) == 'ERR' && std::tuple::get<3>(point[i]) == 'ERR'){
+          accelProfile *target_point = new accelProfile(point[i]);
+          targetQueue.push();
+        }
+      }
     }
-    void isTargetQueueEmpty(){
-    }
-    accelProfile targetProfile;  
-    RouteGenerator targetRoute;
-};
-enum class Coat{
-  red1,
-  red2,
-  blue1,
-  blue2
+    accelProfile *targetProfile<T>;  
+    RouteGenerator *targetRoute<T, N>;
+    std::vector<route_tuple> point;
+    std::queue<targetProfile*> targetQueue;
 };
 template<Coat color>
 std::vector<route_pair> routeInit(){
@@ -214,4 +228,9 @@ std::vector<route_pair> routeInit(){
 int main(){
   RouteGenerator<float, 90000> routeObject(routeInit<Coat::blue1>());
   routeObject();
+  route_pair target;
+  TargetPosition<float, 90000> targetPoint(routeInit<Coat::blue1>());
+  while(1){
+    target = TargetPosition(timer);
+  }
 }
