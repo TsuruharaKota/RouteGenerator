@@ -90,11 +90,11 @@ class RouteGenerator{
     }
     bool fileSet(){
       std::ofstream outputFile("Test.txt");
-      for(auto &point : route_goal){
-        outputFile << std::fixed << std::setprecision(5) << point.first << " " << point.second << "\n";
-      }
+      for(auto &point : route_goal){outputFile << std::fixed << std::setprecision(5) << point.first << " " << point.second << "\n";}
       outputFile.close();
       return true;
+    }
+    route_pair positionGetter(){
     }
     float Timer();
     float time;
@@ -104,8 +104,8 @@ class RouteGenerator{
 template<typename T>
 class accelProfile{
     public:
-        accelProfile(accelParam &_param):param(_param){}
-        void operator()(std::vector<route_tuple> &_dist){
+        accelProfile(route_tuple &_param):param(_param){}
+        void accelMain(float time){
           float VEL_INI = std::tuple::get<2>(param);
           float VEL_FIN = std::tuple::get<3>(param);
           float total_distance = calDistance();
@@ -121,18 +121,20 @@ class accelProfile{
         float calDistance(){
             float temp_distance{};
             if(isSpline()){
+              //スプライン曲線であった場合
                 for(int i = 0; i < 100; ++i){
                     float x = [i];
                     float y = [i];
                     temp_distance += std::sqrt((x * x) + (y * y));
                 }
             }else{
+              //スプライン曲線ではない場合
                 x_fin == x_ini ? temp_distance = y_fin - y_ini : x_fin - x_ini;
             }
             return temp_distance;
         }
         bool isSpline(){
-            if(std::tuple::get<2>())
+          return (std::tuple::get<2>([i]) != std::tuple::get<2>([i + 1]) and std::tuple::get<3>([i]) != std::tuple::get<3>([i + 1]))
         }
         vector<route_pair> dist;
         std::vector<route_tuple> route;
@@ -148,11 +150,14 @@ class TargetPosition{
       targetProfile = new RouteGenerator(_point);
     }
     route_pair operator()(float time){
-      //タイマー処理
+      //入力された時間の位置を出力する
       if(targetQueue.empty() == false){
-
+        //キューを更新する条件かどうか
+        if(){targetQueue.pop();}
+        route_pair get_point = targetQueue.front() -> accelMain(time);
+        return get_point;
       }else{
-        //速度が0になるような処理
+        return route_pair(0.0f, 0.0f);
       }
     }
   private:
@@ -226,11 +231,9 @@ std::vector<route_pair> routeInit(){
   return point;
 }
 int main(){
-  RouteGenerator<float, 90000> routeObject(routeInit<Coat::blue1>());
-  routeObject();
   route_pair target;
   TargetPosition<float, 90000> targetPoint(routeInit<Coat::blue1>());
   while(1){
-    target = TargetPosition(timer);
+    target = targetPoint(timer);
   }
 }
