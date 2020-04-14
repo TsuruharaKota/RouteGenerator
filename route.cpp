@@ -135,20 +135,23 @@ class RouteGenerator{
 template<typename T>
 class AccelProfile{
     public:
-        accelProfile(route_tuple &_param, RouteGenerator *_generatorObj):param(_param), generatorobj(_generatorObj){}
-        void accelMain(float time){
-          float VEL_INI = std::tuple::get<2>(param);
-          float VEL_FIN = std::tuple::get<3>(param);
-          float total_distance = calDistance();
+        accelProfile(route_tuple &_param, RouteGenerator *_generatorObj):param(_param), generatorobj(_generatorObj){
+          VEL_INI = std::tuple::get<2>(param);
+          VEL_FIN = std::tuple::get<3>(param);
+          total_distance = calDistance();
           //等速区間に達しない場合の例外処理
-          float accel_section_time = (VEL_MAX - VEL_INI) / ACCEL; 
-          float accel_section_time_pos = 0.5 * (VEL_FIN + TARGET_VEL) * accel_section_time; 
-          float decel_section_time = (VEL_MAX - VEL_FIN) / ACCEL;
-          float decel_section_pos = 0.5 * (VEL_INI + TARGET_VEL) * decel_section_time;
-          float constant_vel_section_pos = total_distance - (accel_section_time_pos + decel_section_pos);
-          float constant_vel_section_time = constant_vel_section_pos / TARGET_VEL;
+          accel_section_time = (VEL_MAX - VEL_INI) / ACCEL; 
+          accel_section_time_pos = 0.5 * (VEL_FIN + TARGET_VEL) * accel_section_time; 
+          decel_section_time = (VEL_MAX - VEL_FIN) / ACCEL;
+          decel_section_pos = 0.5 * (VEL_INI + TARGET_VEL) * decel_section_time;
+          constant_vel_section_pos = total_distance - (accel_section_time_pos + decel_section_pos);
+          constant_vel_section_time = constant_vel_section_pos / TARGET_VEL;
+        }
+        route_pair operator()(float time){
+          return ;
         }
         float timerLimitGetter(float timer){
+          return accel_section_time + decel_section_time + constant_vel_section_time;
         }
     private:
         float calDistance(){
@@ -180,6 +183,15 @@ class AccelProfile{
         constexpr float ACCEL; 
         constexpr float VEL_MAX;
         constexpr float VEL_MIN;
+        float VEL_INI;
+        float VEL_FIN;
+        float total_distance;
+        float accel_section_time; 
+        float accel_section_time_pos; 
+        float decel_section_time;
+        float decel_section_pos;
+        float constant_vel_section_pos;
+        float constant_vel_section_time;
 };
 template<typename T, long long N>
 class TargetPosition{
@@ -194,9 +206,11 @@ class TargetPosition{
         if(timer > timer_limit){
           targetQueue.pop();
           timer_limit = timer;
-          timer_limit += targetProfile -> timerLimitGetter(timer);
+          AccelProfile targetLimitObj = targetQueue.front();
+          timer_limit += targetLimitObj.timerLimitGetter(timer);
         }
-        route_pair get_point = targetQueue.front() -> accelMain(timer);
+        AccelProfile tagetObj = targetQueue.front();
+        route_pair get_point = targetObj(timer);
         return get_point;
       }else{
         return route_pair(0.0f, 0.0f);
@@ -212,10 +226,10 @@ class TargetPosition{
         }
       }
     }
-    accelProfile<T> *targetProfile;  
+    AccelProfile<T> *targetProfile;  
     RouteGenerator<T, N> *targetRoute;
     std::vector<route_tuple> point;
-    std::queue<targetProfile*> targetQueue;
+    std::queue<AccelProfile*> targetQueue;
     float timer_limit;
 };
 template<Coat color>
