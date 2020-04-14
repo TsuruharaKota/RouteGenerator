@@ -9,6 +9,7 @@
 #include<vector>
 #include<cmath>
 #include<iomanip>
+#include<queue>
 using route_pair = std::pair<float, float>;
 using route_tuple = std::tuple<float, float, unsigned int>;
 namespace route{
@@ -23,6 +24,17 @@ enum class Coat{
   red2,
   blue1,
   blue2
+};
+template<typename T>
+class SplineParam{
+  public:
+    SplineParam(Eigen::Matrix<T, 4, 2> &_param):param(_param);
+    route_pair operator()(T fanctor){
+      return (route_pair(param(0, 0) * pow(fanctor, 3) + param(1, 0) * pow(fanctor, 2) + param(2, 0) * fanctor + param(3, 0), 
+                         param(0, 1) * pow(fanctor, 3) + param(1, 1) * pow(fanctor, 2) + param(2, 1) * fanctor + param(3, 1))); 
+    }
+  private:
+    Eigen::Matrix<T, 4, 2> param;
 };
 template<typename T, int N>
 class RouteGenerator{
@@ -83,10 +95,12 @@ class RouteGenerator{
                route[i + 3].first, route[i + 3].second;
           Eigen::ColPivHouseholderQR<Eigen::Matrix4f> dec(A);
           Eigen::Matrix<float, 4, 2> x = A.colPivHouseholderQr().solve(b);
+          splineObj.push(SplineParam<float>(x));
           for(float j = u[0]; j <= u[3]; j+= (u[3] - u[0]) / 10){
               route_goal.push_back(route_pair(x(0, 0) * pow(j, 3) + x(1, 0) * pow(j, 2) + x(2, 0) * j + x(3, 0), 
-                               x(0, 1) * pow(j, 3) + x(1, 1) * pow(j, 2) + x(2, 1) * j + x(3, 1))); 
+     　　　　　　　　　                          x(0, 1) * pow(j, 3) + x(1, 1) * pow(j, 2) + x(2, 1) * j + x(3, 1))); 
           }
+          spline_factor.push(u[3]);
           i += 2;
         }
       }
@@ -101,12 +115,22 @@ class RouteGenerator{
       outputFile.close();
       return true;
     }
-    route_pair positionGetter(){
+    route_pair positionGetter(float u_temp, float counter){
+      if(counter == 1){splineObj.pop();}
+      SplineParam tempSplineObj = splineObj.front();
+      return tempSplineObj(u_temp);
+    }
+    float splineFactorGetter(){
+      float factor = spline_factor.front();
+      spline_factor.pop();
+      return factor;
     }
     float Timer();
     float time;
     std::vector<route_pair> route;
     std::vector<route_pair> route_goal;
+    std::queue<float> spline_factor;
+    std::queue<SplineParam<float>> splineObj;
 };
 template<typename T>
 class AccelProfile{
@@ -128,23 +152,23 @@ class AccelProfile{
         }
     private:
         float calDistance(){
-            float temp_distance{};
-            if(isSpline()){
-              //スプライン曲線であった場合
-              //uをRouteGeneratorから持ってくる
-                float spline_factor = genearteObj -> splineFactorGetter();
-                float map_counter{};
-                for(int i = 0; i < 100; ++i){
-                    map_counter += 0.01
-                    float position_getter_val = route::map(map_counter, 0, 1, 0, spline_factor)
-                    route_pair temp_pos = generatorObj -> positionGetter(position_getter_val);
-                    temp_distance += std::sqrt((x * x) + (y * y));
-                }
-            }else{
-              //スプライン曲線ではない場合
-                x_fin == x_ini ? temp_distance = y_fin - y_ini : x_fin - x_ini;
+          float temp_distance{};
+          if(isSpline()){
+            //スプライン曲線であった場合
+            //uをRouteGeneratorから持ってくる
+            float spline_factor = genearteObj -> splineFactorGetter();
+            float map_counter{};
+            for(int i = 0; i < 100; ++i){
+                map_counter += 0.01
+                float position_getter_val = route::map(map_counter, 0, 1, 0, spline_factor)
+                route_pair temp_pos = generatorObj -> positionGetter(position_getter_val, i);
+                temp_distance += std::sqrt((temp_pos.first * temp_pos.first) + (temp_pos.second * temp_pos.second));
             }
-            return temp_distance;
+          }else{
+            //スプライン曲線ではない場合
+            x_fin == x_ini ? temp_distance = y_fin - y_ini : temp_distance = x_fin - x_ini;
+          }
+          return temp_distance;
         }
         bool isSpline(){
           return (std::tuple::get<2>([i]) != std::tuple::get<2>([i + 1]) and std::tuple::get<3>([i]) != std::tuple::get<3>([i + 1]))
