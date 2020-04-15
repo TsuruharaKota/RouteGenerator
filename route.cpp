@@ -148,7 +148,18 @@ class AccelProfile{
           constant_vel_section_time = constant_vel_section_pos / TARGET_VEL;
         }
         route_pair operator()(float time){
-          return ;
+          float distance_cal{};
+          if(time < accel_section_time){
+            //加速区間のときの移動距離
+            distance_cal = 0.5 * (VEL_INI + (((VEL_MAX - VEL_INI) / accel_section_time) * time));
+          }else if(time > accel_section_time + constant_vel_section_time){
+            //減速区間のときの移動距離
+            distance_cal = 0.5 * (VEL_FIN + (((VEL_FIN - VEL_MAX) / (accel_section_time + decel_section_time + constant_vel_section_time)) * time)); 
+          }else{
+            //等速区間のときの移動距離
+            distance_cal = accel_section_time_pos + (time * VEL_MAX);
+          }
+          return convertPos(distance_cal);
         }
         float timerLimitGetter(float timer){
           return accel_section_time + decel_section_time + constant_vel_section_time;
@@ -175,6 +186,16 @@ class AccelProfile{
         }
         bool isSpline(){
           return (std::tuple::get<2>([i]) != std::tuple::get<2>([i + 1]) and std::tuple::get<3>([i]) != std::tuple::get<3>([i + 1]))
+        }
+        route_pair convertPos(float distance){
+          if(isSpline()){
+            //スプライン補間の場合
+            return ;
+          }else{
+            //直線補間の場合
+            
+            return ;
+          }
         }
         RouteGenerator<T, N> *generatorObj;
         vector<route_pair> dist;
