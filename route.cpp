@@ -29,12 +29,23 @@ template<typename T>
 class SplineParam{
   public:
     SplineParam(Eigen::Matrix<T, 4, 2> &_param):param(_param);
-    route_pair operator()(T fanctor){
+    route_pair splineMain(T fanctor){
       return (route_pair(param(0, 0) * pow(fanctor, 3) + param(1, 0) * pow(fanctor, 2) + param(2, 0) * fanctor + param(3, 0), 
                          param(0, 1) * pow(fanctor, 3) + param(1, 1) * pow(fanctor, 2) + param(2, 1) * fanctor + param(3, 1))); 
     }
+    route_pair converterPos(float distance){
+      static float fanctor{};
+      route_pair temp_pos{};
+      while(((temp_distance - 0.1) < temp_distance) and (temp_distance < (temp_distance + 0.1))){
+        fanctor += 0.01
+        temp_pos = this -> splineMain(fanctor);
+        temp_distance += std::sqrt((temp_pos.first * temp_pos.first) + (temp_pos.second * temp_pos.second));
+      }
+      return temp_pos;
+    }
   private:
     Eigen::Matrix<T, 4, 2> param;
+    float total_distance;
 };
 template<typename T, int N>
 class RouteGenerator{
@@ -96,6 +107,7 @@ class RouteGenerator{
           Eigen::ColPivHouseholderQR<Eigen::Matrix4f> dec(A);
           Eigen::Matrix<float, 4, 2> x = A.colPivHouseholderQr().solve(b);
           splineObj.push(SplineParam<float>(x));
+          splineConverterObj.push(SplineParam<float>(x));
           for(float j = u[0]; j <= u[3]; j+= (u[3] - u[0]) / 10){
               route_goal.push_back(route_pair(x(0, 0) * pow(j, 3) + x(1, 0) * pow(j, 2) + x(2, 0) * j + x(3, 0), 
      　　　　　　　　　                          x(0, 1) * pow(j, 3) + x(1, 1) * pow(j, 2) + x(2, 1) * j + x(3, 1))); 
@@ -118,12 +130,22 @@ class RouteGenerator{
     route_pair positionGetter(float u_temp, float counter){
       if(counter == 1){splineObj.pop();}
       SplineParam tempSplineObj = splineObj.front();
-      return tempSplineObj(u_temp);
+      return tempSplineObj.splineMain(u_temp);
     }
     float splineFactorGetter(){
       float factor = spline_factor.front();
       spline_factor.pop();
       return factor;
+    }
+    route_pair splineDisPosConverter(float distance, float total_distance){
+      if(distance == total_distance){splineConverterObj.pop();}
+      SplineParam ConverterObj = splineConverterObj.front();
+      return ConverterObj.converterPos(u_temp);
+    }
+    route_pair linearDisPosConverter(float distance){
+      if(counter == 1){splineObj.pop();}
+      SplineParam ConverterObj = splineObj.front();
+      return ConverterObj.converterPos(u_temp);
     }
     float Timer();
     float time;
@@ -131,6 +153,7 @@ class RouteGenerator{
     std::vector<route_pair> route_goal;
     std::queue<float> spline_factor;
     std::queue<SplineParam<float>> splineObj;
+    std::queue<SplineParam<float>> splineConverterObj;
 };
 template<typename T>
 class AccelProfile{
@@ -159,7 +182,13 @@ class AccelProfile{
             //等速区間のときの移動距離
             distance_cal = accel_section_time_pos + (time * VEL_MAX);
           }
-          return convertPos(distance_cal);
+          if(isSpline()){
+            //スプライン補間の場合
+            return generatorObj -> splineDisPosConverter(distance_cal);
+          }else{
+            //直線補間の場合
+            return generatorObj -> linearDisPosConverter(distance_cal);
+          }
         }
         float timerLimitGetter(float timer){
           return accel_section_time + decel_section_time + constant_vel_section_time;
@@ -170,7 +199,7 @@ class AccelProfile{
           if(isSpline()){
             //スプライン曲線であった場合
             //uをRouteGeneratorから持ってくる
-            float spline_factor = genearteObj -> splineFactorGetter();
+            float spline_factor = generatorObj -> splineFactorGetter();
             float map_counter{};
             for(int i = 0; i < 100; ++i){
                 map_counter += 0.01
@@ -187,16 +216,7 @@ class AccelProfile{
         bool isSpline(){
           return (std::tuple::get<2>([i]) != std::tuple::get<2>([i + 1]) and std::tuple::get<3>([i]) != std::tuple::get<3>([i + 1]))
         }
-        route_pair convertPos(float distance){
-          if(isSpline()){
-            //スプライン補間の場合
-            return ;
-          }else{
-            //直線補間の場合
-            
-            return ;
-          }
-        }
+  
         RouteGenerator<T, N> *generatorObj;
         vector<route_pair> dist;
         std::vector<route_tuple> route;
@@ -218,7 +238,7 @@ template<typename T, long long N>
 class TargetPosition{
   public:
     TargetPosition(std::vector<route_tuple>& _point) : point(_point){
-      targetProfile = new RouteGenerator(_point);
+      targetRoute = new RouteGenerator(_point);
     }
     route_pair operator()(float timer){
       //入力された時間の位置を出力する
@@ -242,7 +262,7 @@ class TargetPosition{
       //目標位置をキューごとで管理する
       for(int i = 0; i < 10; ++i){
         if(std::tuple::get<2>(point[i]) == 'ERR' && std::tuple::get<3>(point[i]) == 'ERR'){
-          accelProfile *target_point = new AccelProfile(point[i]);
+          AccelProfile *target_point = new AccelProfile(point[i], targetRoute);
           targetQueue.push();
         }
       }
