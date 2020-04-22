@@ -141,22 +141,30 @@ class AccelProfile{
           constant_vel_section_pos = total_distance - (accel_section_time_pos + decel_section_pos);
           constant_vel_section_time = constant_vel_section_pos / TARGET_VEL;
         }
-        float operator()(float time){
+        float operator()(float time, float TIME_INI){
           //目標現在速度を出力する
+          /*if(init_flag == true){
+            TIME_INI = time;
+            std::cout << "---------------------------" << std::endl;
+          }*/
           float cmd_vel{};
+          //std::cout << TIME_INI << std::endl;
+          std::printf("%f %f %f\n", timerLimitGetter(), TIME_INI, time);
+          //std::cout << timerLimitGetter() << " " << time - TIME_INI << std::endl;
           if(time < accel_section_time){
             //加速区間のときの速度
-            cmd_vel = 0;
+            cmd_vel = VEL_INI + ACCEL * (time - TIME_INI);
           }else if(time > accel_section_time + constant_vel_section_time){
             //減速区間のときの速度
-            cmd_vel = 0; 
+            float limit = this -> timerLimitGetter();
+            cmd_vel = VEL_FIN + ACCEL * (limit - (time - TIME_INI)); 
           }else{
             //等速区間のときの速度
-            cmd_vel = 0;
+            cmd_vel = VEL_MAX;
           }
           return cmd_vel;
         }
-        float timerLimitGetter(float timer){
+        float timerLimitGetter(){
           return accel_section_time + decel_section_time + constant_vel_section_time;
         }
     private:
@@ -164,9 +172,9 @@ class AccelProfile{
         std::vector<route_pair> dist;
         std::vector<route_tuple> route;
         float TARGET_VEL;
-        const float ACCEL = 3.0f; 
-        const float VEL_MAX = 9.0f;
+        const float ACCEL = 1.0f; 
         const float VEL_MIN = 0.0f;
+        float VEL_MAX = 6.0f;
         float VEL_INI;
         float VEL_FIN;
         float total_distance;
@@ -209,11 +217,13 @@ class TargetPosition{
           targetQueue.pop();
           AccelProfile<float> targetLimitObj = targetQueue.front();
           timer_limit = timer;
-          timer_limit += targetLimitObj.timerLimitGetter(timer);
+          timer_limit += targetLimitObj.timerLimitGetter();
+          init_time = timer;
         }
+        //std::cout << timer_limit << " " << timer << std::endl;
         //std::cout << targetQueue.size() << std::endl;
         AccelProfile<float> targetObj = targetQueue.front();
-        float vel = targetObj(timer);
+        float vel = targetObj(timer, init_time);
         float angle = 0;
         float angle_vel = 0;
         return target_tuple(vel, angle, angle_vel); 
@@ -273,6 +283,7 @@ class TargetPosition{
     std::queue<AccelProfile<float>> targetQueue;
     std::queue<route_pair> pointQueue;
     float timer_limit{};
+    float init_time{};
 };
 template<Coat color>
 std::vector<route_tuple> routeInit(){
@@ -336,7 +347,7 @@ int main(){
   float timer{};
   while(1){
     auto end = std::chrono::system_clock::now(); 
-    timer = static_cast<float>(std::chrono::duration_cast<std::chrono::seconds>(end - start).count());
+    timer = static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()) / 1000;
     //std::cout << timer << std::endl;
     target = targetPoint(timer);
     //std::cout << std::get<0>(target) << std::endl;
