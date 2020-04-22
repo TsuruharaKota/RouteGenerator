@@ -42,7 +42,7 @@ class RouteGenerator{
   public:
     //----------route_pair(X, Y)----------//
     RouteGenerator(std::vector<route_pair>& passing_point):route(passing_point){}
-    void operator()(){
+    void Main(){
       try{
         if((this -> generateRoute()) == false)throw 1;
         if((this -> fileSet()) == false)throw 2;
@@ -57,6 +57,16 @@ class RouteGenerator{
             std::cerr << "error occurred" << std::endl;
         }
       }
+    }
+    float splineFactorGetter(){
+      float factor = spline_factor.front();
+      spline_factor.pop();
+      return factor;
+    }
+    route_pair positionGetter(float u_temp, float counter){
+      if(counter == 1){splineObj.pop();}
+      SplineParam<float> tempSplineObj = splineObj.front();
+      return tempSplineObj.splineMain(u_temp);
     }
   private:
     bool generateRoute(){
@@ -110,16 +120,6 @@ class RouteGenerator{
       outputFile.close();
       return true;
     }
-    float splineFactorGetter(){
-      float factor = spline_factor.front();
-      spline_factor.pop();
-      return factor;
-    }
-    route_pair positionGetter(float u_temp, float counter){
-      if(counter == 1){splineObj.pop();}
-      SplineParam<float> tempSplineObj = splineObj.front();
-      return tempSplineObj.splineMain(u_temp);
-    }
     float time;
     std::vector<route_pair> route;
     std::vector<route_pair> route_goal;
@@ -130,7 +130,7 @@ template<typename T>
 class AccelProfile{
     public:
         //----------route_pair(VEL_INI, VEL_FIN)----------//
-        AccelProfile(route_pair &_param, float _total_distance):param(_param), total_distance(_total_distance){
+        AccelProfile(route_pair &&_param, float _total_distance):param(_param), total_distance(_total_distance){
           VEL_INI = param.first;
           VEL_FIN = param.second;
           //等速区間に達しない場合の例外処理
@@ -164,9 +164,9 @@ class AccelProfile{
         std::vector<route_pair> dist;
         std::vector<route_tuple> route;
         float TARGET_VEL;
-        float ACCEL; 
-        float VEL_MAX;
-        float VEL_MIN;
+        float ACCEL = 3.0f; 
+        float VEL_MAX = 9.0f;
+        float VEL_MIN = 0.0f;
         float VEL_INI;
         float VEL_FIN;
         float total_distance;
@@ -192,6 +192,9 @@ class TargetPosition{
         param_pos.push_back(route_pair(std::get<0>(input_param[i]), std::get<1>(input_param[i])));
       }
       targetRoute = new RouteGenerator<float>(param_pos);
+      targetRoute -> Main();
+      this -> setQueue();
+      std::cout << "finish constractor" << std::endl;
     }
     void setQueue(){
       //目標位置をキューごとで管理する
@@ -211,11 +214,13 @@ class TargetPosition{
       //入力された時間の位置を出力する
       if(targetQueue.empty() == false){
         //キューを更新する条件かどうか
+        std::cout << timer_limit << std::endl;
         if(timer > timer_limit){
           targetQueue.pop();
           AccelProfile<float> targetLimitObj = targetQueue.front();
           timer_limit = timer;
           timer_limit += targetLimitObj.timerLimitGetter(timer);
+          std::cout << "fin" << std::endl;
         }
         AccelProfile<float> targetObj = targetQueue.front();
         float vel = targetObj(timer);
@@ -223,6 +228,7 @@ class TargetPosition{
         float angle_vel = 0;
         return target_tuple(vel, angle, angle_vel); 
       }else{
+        std::cout << "finish" << std::endl;
         return target_tuple(0.0f, 0.0f, 0.0f);
       }
     }
@@ -262,23 +268,23 @@ class TargetPosition{
     std::vector<route_tuple> input_param;
     std::queue<AccelProfile<float>> targetQueue;
     std::queue<route_pair> pointQueue;
-    float timer_limit;
+    float timer_limit{};
 };
 template<Coat color>
 std::vector<route_tuple> routeInit(){
   std::vector<route_tuple> point;
   switch(color){
     case Coat::red1:
-      point.push_back(route_tuple(1.0f, 0.1f, 0.0f, 0.0f));
-      point.push_back(route_tuple(2.0f, 0.3f, 0.0f, 0.0f));
-      point.push_back(route_tuple(2.5f, 0.5f, 0.0f, 0.0f));
-      point.push_back(route_tuple(4.0f, 1.0f, 0.0f, 0.0f));
-      point.push_back(route_tuple(4.0f, 2.0f, 0.0f, 0.0f));
-      point.push_back(route_tuple(4.0f, 3.0f, 0.0f, 0.0f));
-      point.push_back(route_tuple(4.0f, 4.0f, 0.0f, 0.0f));
-      point.push_back(route_tuple(4.0f, 5.0f, 0.0f, 0.0f));
-      point.push_back(route_tuple(4.0f, 6.0f, 0.0f, 0.0f));
-      point.push_back(route_tuple(4.0f, 7.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(1.0f, 0.1f, 1.0f, 0.0f));
+      point.push_back(route_tuple(20.0f, 0.1f, 2.0f, 0.0f));
+      point.push_back(route_tuple(25.0f, 0.1f, 3.0f, 0.0f));
+      point.push_back(route_tuple(40.0f, 0.1f, 4.0f, 0.0f));
+      point.push_back(route_tuple(40.0f, 20.0f, 5.0f, 0.0f));
+      point.push_back(route_tuple(40.0f, 30.0f, 4.0f, 0.0f));
+      point.push_back(route_tuple(40.0f, 40.0f, 3.0f, 0.0f));
+      point.push_back(route_tuple(40.0f, 50.0f, 2.0f, 0.0f));
+      point.push_back(route_tuple(40.0f, 60.0f, 1.0f, 0.0f));
+      point.push_back(route_tuple(40.0f, 70.0f, 0.0f, 0.0f));
       break;
     case Coat::red2:
       point.push_back(route_tuple(1.0f, 0.1f, 0.0f, 0.0f));
@@ -322,8 +328,12 @@ std::vector<route_tuple> routeInit(){
 int main(){
   target_tuple target;
   TargetPosition<float, 90000> targetPoint(routeInit<Coat::red1>());
+  auto start = std::chrono::system_clock::now();
+  float timer{};
   while(1){
-    float timer;
+    auto end = std::chrono::system_clock::now(); 
+    timer = static_cast<float>(std::chrono::duration_cast<std::chrono::seconds>(end - start).count());
+    std::cout << timer << std::endl;
     target = targetPoint(timer);
   }
 }
