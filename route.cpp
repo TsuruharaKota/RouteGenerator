@@ -190,37 +190,25 @@ class TargetPosition{
       std::vector<route_pair> param_pos;
       for(int i = 0; i < input_param.size(); ++i){
         param_pos.push_back(route_pair(std::get<0>(input_param[i]), std::get<1>(input_param[i])));
+        if(std::get<2>(input_param[i]) != -1.0f){
+          pointQueue.push(route_pair(std::get<0>(input_param[i]), std::get<1>(input_param[i])));
+        }
       }
       targetRoute = new RouteGenerator<float>(param_pos);
       targetRoute -> Main();
       this -> setQueue();
-      std::cout << "finish constractor" << std::endl;
-    }
-    void setQueue(){
-      //目標位置をキューごとで管理する
-      float prev_vel{};
-      for(int i = 0; i < 10; ++i){
-        //-1.0fの場合はそこを挟む点がスプライン補間される
-        if(std::get<2>(input_param[i]) != -1.0f){
-          float distance = this -> calDistance();
-          AccelProfile<float> target_point(route_pair(prev_vel, std::get<2>(input_param[i])), distance);
-          targetQueue.push(target_point);
-          pointQueue.push(route_pair(std::get<0>(input_param[i]), std::get<1>(input_param[i])));
-          prev_vel = std::get<2>(input_param[i]);
-        }
-      }
     }
     target_tuple operator()(float timer){
       //入力された時間の位置を出力する
       if(targetQueue.empty() == false){
         //キューを更新する条件かどうか
-        std::cout << timer_limit << std::endl;
+        //std::cout << timer_limit << std::endl;
+        //std::cout << "queue size = " << targetQueue.size() << std::endl;
         if(timer > timer_limit){
           targetQueue.pop();
           AccelProfile<float> targetLimitObj = targetQueue.front();
           timer_limit = timer;
           timer_limit += targetLimitObj.timerLimitGetter(timer);
-          std::cout << "fin" << std::endl;
         }
         AccelProfile<float> targetObj = targetQueue.front();
         float vel = targetObj(timer);
@@ -228,17 +216,30 @@ class TargetPosition{
         float angle_vel = 0;
         return target_tuple(vel, angle, angle_vel); 
       }else{
-        std::cout << "finish" << std::endl;
         return target_tuple(0.0f, 0.0f, 0.0f);
       }
     }
   private:
+    void setQueue(){
+      //目標位置をキューごとで管理する
+      float prev_vel{};
+      for(int i = 0; i < 10; ++i){
+        //-1.0fの場合はそこを挟む点がスプライン補間される
+        if(std::get<2>(input_param[i]) != -1.0f){
+          float distance = this -> calDistance();
+          std::cout << std::get<2>(input_param[i]) << " " << "distance = " << distance << std::endl;
+          AccelProfile<float> target_point(route_pair(prev_vel, std::get<2>(input_param[i])), distance);
+          targetQueue.push(target_point);
+          prev_vel = std::get<2>(input_param[i]);
+        }
+      }
+    }
     float calDistance(){
       float total_distance{};
       static route_pair prev_point{};
       route_pair now_point = pointQueue.front();
       //この条件式いらないかも
-      if(pointQueue.size() >= 2){
+      //if(pointQueue.size() >= 2){
         if(now_point.first != prev_point.first and now_point.second != prev_point.second){
           //スプライン曲線であった場合
           //残りの座標キューの数が2個以上であるか
@@ -255,11 +256,11 @@ class TargetPosition{
         }else{
           //スプライン曲線ではない場合
           prev_point.first == now_point.first ? total_distance = now_point.second - prev_point.second : 
-                                                total_distance = now_point.first - now_point.first;
+                                                total_distance = now_point.first - prev_point.first;
         }
         prev_point = now_point;
         pointQueue.pop();
-      }
+      //}
       return total_distance;
     }
     RouteGenerator<T> *targetRoute;
@@ -275,10 +276,10 @@ std::vector<route_tuple> routeInit(){
   std::vector<route_tuple> point;
   switch(color){
     case Coat::red1:
-      point.push_back(route_tuple(1.0f, 0.1f, 1.0f, 0.0f));
-      point.push_back(route_tuple(20.0f, 0.1f, 2.0f, 0.0f));
-      point.push_back(route_tuple(25.0f, 0.1f, 3.0f, 0.0f));
-      point.push_back(route_tuple(40.0f, 0.1f, 4.0f, 0.0f));
+      point.push_back(route_tuple(0.0f, 0.0f, 1.0f, 0.0f));
+      point.push_back(route_tuple(20.0f, 0.0f, 2.0f, 0.0f));
+      point.push_back(route_tuple(25.0f, 0.0f, 3.0f, 0.0f));
+      point.push_back(route_tuple(40.0f, 0.0f, 4.0f, 0.0f));
       point.push_back(route_tuple(40.0f, 20.0f, 5.0f, 0.0f));
       point.push_back(route_tuple(40.0f, 30.0f, 4.0f, 0.0f));
       point.push_back(route_tuple(40.0f, 40.0f, 3.0f, 0.0f));
@@ -333,7 +334,8 @@ int main(){
   while(1){
     auto end = std::chrono::system_clock::now(); 
     timer = static_cast<float>(std::chrono::duration_cast<std::chrono::seconds>(end - start).count());
-    std::cout << timer << std::endl;
+    //std::cout << timer << std::endl;
     target = targetPoint(timer);
+    //std::cout << std::get<0>(target) << std::endl;
   }
 }
