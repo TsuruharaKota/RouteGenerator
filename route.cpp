@@ -5,13 +5,14 @@
 #include<tuple>
 #include<fstream>
 #include<string>
-#include<eigen3/Dense>
+#include<Eigen/Dense>
 #include<vector>
 #include<cmath>
 #include<iomanip>
 #include<queue>
 using route_pair = std::pair<float, float>;
-using route_tuple = std::tuple<float, float, unsigned int>;
+using target_tuple = std::tuple<float, float, float>;
+using route_tuple = std::tuple<float, float, float, float>;
 namespace route{
   template<typename T>
   inline T map(T x, T in_min, T in_max, T out_min, T out_max){
@@ -30,16 +31,17 @@ class SplineParam{
   public:
     SplineParam(Eigen::Matrix<T, 4, 2> &_param):param(_param){};
     route_pair splineMain(T fanctor){
-      return (route_pair(param(0, 0) * pow(fanctor, 3) + param(1, 0) * pow(fanctor, 2) + param(2, 0) * fanctor + param(3, 0), 
-                         param(0, 1) * pow(fanctor, 3) + param(1, 1) * pow(fanctor, 2) + param(2, 1) * fanctor + param(3, 1))); 
+      return (route_pair(param(0, 0) * std::pow(fanctor, 3) + param(1, 0) * std::pow(fanctor, 2) + param(2, 0) * fanctor + param(3, 0), 
+                         param(0, 1) * std::pow(fanctor, 3) + param(1, 1) * std::pow(fanctor, 2) + param(2, 1) * fanctor + param(3, 1))); 
     }
   private:
     Eigen::Matrix<T, 4, 2> param;
 };
-template<typename T, int N>
+template<typename T>
 class RouteGenerator{
   public:
-    RouteGenerator(std::vector<route_pair>&& passing_point):route(passing_point){}
+    //----------route_pair(X, Y)----------//
+    RouteGenerator(std::vector<route_pair>& passing_point):route(passing_point){}
     void operator()(){
       try{
         if((this -> generateRoute()) == false)throw 1;
@@ -93,15 +95,12 @@ class RouteGenerator{
           Eigen::Matrix<float, 4, 2> x = A.colPivHouseholderQr().solve(b);
           splineObj.push(SplineParam<float>(x));
           for(float j = u[0]; j <= u[3]; j+= (u[3] - u[0]) / 10){
-              route_goal.push_back(route_pair(x(0, 0) * pow(j, 3) + x(1, 0) * pow(j, 2) + x(2, 0) * j + x(3, 0), 
-     　　　　　　　　　                          x(0, 1) * pow(j, 3) + x(1, 1) * pow(j, 2) + x(2, 1) * j + x(3, 1))); 
+              route_goal.push_back(route_pair(x(0, 0) * std::pow(j, 3) + x(1, 0) * std::pow(j, 2) + x(2, 0) * j + x(3, 0), 
+                                              x(0, 1) * std::pow(j, 3) + x(1, 1) * std::pow(j, 2) + x(2, 1) * j + x(3, 1))); 
           }
           i += 2;
           spline_factor.push(u[3]);
         }
-      }
-      int devide_time = N / 500;
-      for(int i = 0; i < devide_time; ++i){
       }
       return true;
     }
@@ -118,7 +117,7 @@ class RouteGenerator{
     }
     route_pair positionGetter(float u_temp, float counter){
       if(counter == 1){splineObj.pop();}
-      SplineParam tempSplineObj = splineObj.front();
+      SplineParam<float> tempSplineObj = splineObj.front();
       return tempSplineObj.splineMain(u_temp);
     }
     float time;
@@ -130,9 +129,10 @@ class RouteGenerator{
 template<typename T>
 class AccelProfile{
     public:
-        AccelProfile(route_tuple &_param, float _total_distance):param(_param), total_distance(_total_distance){
-          VEL_INI = std::tuple::get<2>(param);
-          VEL_FIN = std::tuple::get<3>(param);
+        //----------route_pair(VEL_INI, VEL_FIN)----------//
+        AccelProfile(route_pair &_param, float _total_distance):param(_param), total_distance(_total_distance){
+          VEL_INI = param.first;
+          VEL_FIN = param.second;
           //等速区間に達しない場合の例外処理
           accel_section_time = (VEL_MAX - VEL_INI) / ACCEL; 
           accel_section_time_pos = 0.5 * (VEL_FIN + TARGET_VEL) * accel_section_time; 
@@ -160,8 +160,8 @@ class AccelProfile{
           return accel_section_time + decel_section_time + constant_vel_section_time;
         }
     private:
-        route_tuple param; 
-        vector<route_pair> dist;
+        route_pair param; 
+        std::vector<route_pair> dist;
         std::vector<route_tuple> route;
         float TARGET_VEL;
         float ACCEL; 
@@ -185,49 +185,55 @@ class AngleControl{
 template<typename T, long long N>
 class TargetPosition{
   public:
-    TargetPosition(std::vector<route_tuple>& _input_param) : input_param(_input_param){
+    TargetPosition(std::vector<route_tuple>&& _input_param) : input_param(_input_param){
       //ルートを作成
-      vector<route_pair> param_pair;
+      std::vector<route_pair> param_pos;
       for(int i = 0; i < input_param.size(); ++i){
-        param_pair.add(route_pair(std::tuple::get<0>(input_param[i]), std::tuple::get<1>(input_param[i])));
+        param_pos.push_back(route_pair(std::get<0>(input_param[i]), std::get<1>(input_param[i])));
       }
-      targetRoute = new RouteGenerator(param_pair);
+      targetRoute = new RouteGenerator<float>(param_pos);
     }
     void setQueue(){
       //目標位置をキューごとで管理する
+      float prev_vel{};
       for(int i = 0; i < 10; ++i){
-        if(std::tuple::get<2>(input_param[i]) == 'ERR' && std::tuple::get<3>(input_param[i]) == 'ERR'){
-          AccelProfile *target_point = new AccelProfile(point[i]);
+        if(std::get<2>(input_param[i]) != 'ERR'){
+          float distance = this -> calDistance();
+          AccelProfile<float> target_point(route_pair(prev_vel, std::get<2>(input_param[i])), distance);
           //ポインタを外す必要がある
           targetQueue.push(target_point);
-          pointQueue.push(route_pair(std::tuple::get<0>(input_param[i]), std::tuple::get<1>(input_param[i])));
+          pointQueue.push(route_pair(std::get<0>(input_param[i]), std::get<1>(input_param[i])));
+          prev_vel = std::get<2>(input_param[i]);
         }
       }
     }
-    route_tuple operator()(float timer){
+    target_tuple operator()(float timer){
       //入力された時間の位置を出力する
       if(targetQueue.empty() == false){
         //キューを更新する条件かどうか
         if(timer > timer_limit){
           targetQueue.pop();
-          AccelProfile targetLimitObj = targetQueue.front();
+          AccelProfile<float> targetLimitObj = targetQueue.front();
           timer_limit = timer;
           timer_limit += targetLimitObj.timerLimitGetter(timer);
         }
-        AccelProfile tagetObj = targetQueue.front();
+        AccelProfile<float> targetObj = targetQueue.front();
         float vel = targetObj(timer);
         float angle = 0;
         float angle_vel = 0;
-        return route_tuple(vel, angle, angle_vel); 
+        return target_tuple(vel, angle, angle_vel); 
       }else{
-        return route_pair(0.0f, 0.0f, 0.0f);
+        return target_tuple(0.0f, 0.0f, 0.0f);
       }
     }
   private:
     float calDistance(){
       float total_distance{};
+      static route_pair prev_point{};
+      route_pair now_point = pointQueue.front();
+      //この条件式いらないかも
       if(pointQueue.size() >= 2){
-        if(isSpline()){
+        if(now_point.first != prev_point.first and now_point.second != prev_point.second){
           //スプライン曲線であった場合
           //残りの座標キューの数が2個以上であるか
           //pointQueue[0]とpointQueue[1]の間の距離を求める
@@ -236,91 +242,88 @@ class TargetPosition{
           float spline_factor = targetRoute -> splineFactorGetter();
           for(int i = 0; i < 100; ++i){
             map_counter += 0.01;
-            float position_getter_val = route::map(map_counter, 0, 1, 0, spline_factor);
+            float position_getter_val = route::map<float>(map_counter, 0.0f, 1.0f, 0.0f, spline_factor);
             route_pair temp_pos = targetRoute -> positionGetter(position_getter_val, i);
             total_distance += std::sqrt((temp_pos.first * temp_pos.first) + (temp_pos.second * temp_pos.second));
           }
         }else{
           //スプライン曲線ではない場合
-          pointQueue[0].x == pointQueue[1].x ? total_distance = pointQueue[1].y - pointQueue[0].y : 
-                                               total_distance = pointQueue[1].x - pointQueue[0].x;
+          prev_point.first == now_point.first ? total_distance = now_point.second - prev_point.second : 
+                                                total_distance = now_point.first - now_point.first;
         }
+        prev_point = now_point;
         pointQueue.pop();
       }
       return total_distance;
     }
-    bool isSpline(){
-      return (pointQueue[0].x != pointQueue[1].x and pointQueue[0].y != pointQueue[1].y);
-    }
-    RouteGenerator<T, N> *targetRoute;
+    RouteGenerator<T> *targetRoute;
     AccelProfile<T> *targetProfile;
     AngleControl *targetAngle;
     std::vector<route_tuple> input_param;
-    std::vector<route_pair> point;
-    std::queue<AccelProfile*> targetQueue;
+    std::queue<AccelProfile<float>> targetQueue;
     std::queue<route_pair> pointQueue;
     float timer_limit;
 };
 template<Coat color>
-std::vector<route_pair> routeInit(){
-  std::vector<route_pair> point;
+std::vector<route_tuple> routeInit(){
+  std::vector<route_tuple> point;
   switch(color){
     case Coat::red1:
-      point.push_back(route_pair(1.0f, 0.1f));
-      point.push_back(route_pair(2.0f, 0.3f));
-      point.push_back(route_pair(2.5f, 0.5f));
-      point.push_back(route_pair(4.0f, 1.0f));
-      point.push_back(route_pair(4.0f, 2.0f));
-      point.push_back(route_pair(4.0f, 3.0f));
-      point.push_back(route_pair(4.0f, 4.0f));
-      point.push_back(route_pair(4.0f, 5.0f));
-      point.push_back(route_pair(4.0f, 6.0f));
-      point.push_back(route_pair(4.0f, 7.0f));
+      point.push_back(route_tuple(1.0f, 0.1f, 0.0f, 0.0f));
+      point.push_back(route_tuple(2.0f, 0.3f, 0.0f, 0.0f));
+      point.push_back(route_tuple(2.5f, 0.5f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 1.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 2.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 3.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 4.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 5.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 6.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 7.0f, 0.0f, 0.0f));
       break;
     case Coat::red2:
-      point.push_back(route_pair(0.0f, 1.0f));
-      point.push_back(route_pair(0.0f, 2.0f));
-      point.push_back(route_pair(0.0f, 3.0f));
-      point.push_back(route_pair(0.0f, 4.0f));
-      point.push_back(route_pair(1.0f, 5.0f));
-      point.push_back(route_pair(2.0f, 6.0f));
-      point.push_back(route_pair(2.5f, 7.0f));
-      point.push_back(route_pair(2.5f, 8.0f));
-      point.push_back(route_pair(2.5f, 9.0f));
-      point.push_back(route_pair(2.5f, 10.0f));
+      point.push_back(route_tuple(1.0f, 0.1f, 0.0f, 0.0f));
+      point.push_back(route_tuple(2.0f, 0.3f, 0.0f, 0.0f));
+      point.push_back(route_tuple(2.5f, 0.5f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 1.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 2.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 3.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 4.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 5.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 6.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 7.0f, 0.0f, 0.0f));
       break;
     case Coat::blue1:
-      point.push_back(route_pair(18.0f, 6.0f));
-      point.push_back(route_pair(45.0f, 6.0f));
-      point.push_back(route_pair(50.0f, 7.0f));
-      point.push_back(route_pair(53.0f, 10.5f));
-      point.push_back(route_pair(55.0f, 15.0f));
-      point.push_back(route_pair(55.0f, 30.0f));
-      point.push_back(route_pair(55.0f, 45.0f));
-      point.push_back(route_pair(55.0f, 60.0f));
-      point.push_back(route_pair(55.0f, 75.0f));
-      point.push_back(route_pair(55.0f, 100.0f));
+      point.push_back(route_tuple(1.0f, 0.1f, 0.0f, 0.0f));
+      point.push_back(route_tuple(2.0f, 0.3f, 0.0f, 0.0f));
+      point.push_back(route_tuple(2.5f, 0.5f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 1.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 2.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 3.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 4.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 5.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 6.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 7.0f, 0.0f, 0.0f));
       break;
     case Coat::blue2:
-      point.push_back(route_pair(30, 10));
-      point.push_back(route_pair(50, 10));
-      point.push_back(route_pair(200, 10));
-      point.push_back(route_pair(225, 15));
-      point.push_back(route_pair(250, 90));
-      point.push_back(route_pair(400, 100));
-      point.push_back(route_pair(400, 200));
-      point.push_back(route_pair(400, 300));
-      point.push_back(route_pair(400, 400));
-      point.push_back(route_pair(400, 500));
+      point.push_back(route_tuple(1.0f, 0.1f, 0.0f, 0.0f));
+      point.push_back(route_tuple(2.0f, 0.3f, 0.0f, 0.0f));
+      point.push_back(route_tuple(2.5f, 0.5f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 1.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 2.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 3.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 4.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 5.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 6.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(4.0f, 7.0f, 0.0f, 0.0f));
       break;
   }
   return point;
 }
 int main(){
-  route_pair target;
-  TargetPosition<float, 90000> targetPoint(routeInit<Coat::blue1>());
+  target_tuple target;
+  TargetPosition<float, 90000> targetPoint(routeInit<Coat::red1>());
   while(1){
-    int timer;
+    float timer;
     target = targetPoint(timer);
   }
 }
