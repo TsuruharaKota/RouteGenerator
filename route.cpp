@@ -127,63 +127,63 @@ class RouteGenerator{
     std::queue<SplineParam<float>> splineObj;
 };
 template<typename T>
+struct AccelParam{
+  T ACCEL = 1.0f; 
+  T VEL_MIN = 0.0f;
+  T VEL_MAX = 2.5f;
+  T VEL_INI;
+  T VEL_FIN;
+  T total_distance;
+  T accel_section_time; 
+  T accel_section_time_pos; 
+  T decel_section_time;
+  T decel_section_pos;
+  T constant_vel_section_pos;
+  T constant_vel_section_time;
+  void set(route_pair &&_param, T _total_distance){
+    //----------route_pair(VEL_INI, VEL_FIN)----------//
+    VEL_INI = _param.first;
+    VEL_FIN = _param.second;
+    total_distance = _total_distance;
+    accel_section_time = static_cast<T>((VEL_MAX - VEL_INI) / ACCEL);
+    accel_section_time_pos = static_cast<T>(0.5 * (VEL_INI + VEL_MAX) * accel_section_time); 
+    decel_section_time = static_cast<T>((VEL_MAX - VEL_FIN) / ACCEL);
+    decel_section_pos = static_cast<T>(0.5 * (VEL_FIN + VEL_MAX) * decel_section_time);
+    constant_vel_section_pos = static_cast<T>(total_distance - (accel_section_time_pos + decel_section_pos));
+    constant_vel_section_time = static_cast<T>(constant_vel_section_pos / VEL_MAX);
+    if(constant_vel_section_time == 0){
+      //等速区間に達しない場合の例外処理
+    }
+  }
+};
+template<typename T>
 class AccelProfile{
     public:
-        //----------route_pair(VEL_INI, VEL_FIN)----------//
-        AccelProfile(route_pair &&_param, float _total_distance):param(_param), total_distance(_total_distance){
-          VEL_INI = param.first;
-          VEL_FIN = param.second;
-          //等速区間に達しない場合の例外処理
-          accel_section_time = (VEL_MAX - VEL_INI) / ACCEL; 
-          accel_section_time_pos = 0.5 * (VEL_FIN + TARGET_VEL) * accel_section_time; 
-          decel_section_time = (VEL_MAX - VEL_FIN) / ACCEL;
-          decel_section_pos = 0.5 * (VEL_INI + TARGET_VEL) * decel_section_time;
-          constant_vel_section_pos = total_distance - (accel_section_time_pos + decel_section_pos);
-          constant_vel_section_time = constant_vel_section_pos / TARGET_VEL;
-        }
+        AccelProfile(AccelParam<T> _paramObj):paramObj(_paramObj){}
         float operator()(float time, float TIME_INI){
-          //目標現在速度を出力する
-          /*if(init_flag == true){
-            TIME_INI = time;
-            std::cout << "---------------------------" << std::endl;
-          }*/
           float cmd_vel{};
-          //std::cout << TIME_INI << std::endl;
-          //std::printf("%f %f %f\n", timerLimitGetter(), TIME_INI, time);
-          //std::cout << timerLimitGetter() << " " << time - TIME_INI << std::endl;
-          if(time < accel_section_time){
+          std::cout << time - TIME_INI << " " << paramObj.accel_section_time << " " << paramObj.constant_vel_section_time << std::endl;
+          if(time - TIME_INI < paramObj.accel_section_time){
             //加速区間のときの速度
-            cmd_vel = VEL_INI + ACCEL * (time - TIME_INI);
-          }else if(time > accel_section_time + constant_vel_section_time){
+            cmd_vel = paramObj.VEL_INI + paramObj.ACCEL * (time - TIME_INI);
+          }else if(time - TIME_INI > paramObj.accel_section_time + paramObj.constant_vel_section_time){
             //減速区間のときの速度
             float limit = this -> timerLimitGetter();
-            cmd_vel = VEL_FIN + ACCEL * (limit - (time - TIME_INI)); 
+            cmd_vel = paramObj.VEL_FIN + paramObj.ACCEL * (limit - (time - TIME_INI)); 
           }else{
             //等速区間のときの速度
-            cmd_vel = VEL_MAX;
+            cmd_vel = paramObj.VEL_MAX;
           }
           return cmd_vel;
         }
         float timerLimitGetter(){
-          return accel_section_time + decel_section_time + constant_vel_section_time;
+          return paramObj.accel_section_time + paramObj.decel_section_time + paramObj.constant_vel_section_time;
         }
     private:
         route_pair param; 
+        const AccelParam<T> paramObj;
         std::vector<route_pair> dist;
         std::vector<route_tuple> route;
-        float TARGET_VEL;
-        const float ACCEL = 1.0f; 
-        const float VEL_MIN = 0.0f;
-        float VEL_MAX = 6.0f;
-        float VEL_INI;
-        float VEL_FIN;
-        float total_distance;
-        float accel_section_time; 
-        float accel_section_time_pos; 
-        float decel_section_time;
-        float decel_section_pos;
-        float constant_vel_section_pos;
-        float constant_vel_section_time;
 };
 class AngleControl{
   public:
@@ -211,8 +211,7 @@ class TargetPosition{
       //入力された時間の位置を出力する
       if(targetQueue.empty() == false){
         //キューを更新する条件かどうか
-        //std::cout << timer_limit << std::endl;
-        std::cout << "queue size = " << targetQueue.size() << "limit = " << timer_limit << "time = " << timer << std::endl;
+        //std::cout << "queue size = " << targetQueue.size() << "limit = " << timer_limit << "time = " << timer << std::endl;
         if(timer > timer_limit){
           targetQueue.pop();
           AccelProfile<float> targetLimitObj = targetQueue.front();
@@ -220,8 +219,6 @@ class TargetPosition{
           timer_limit += targetLimitObj.timerLimitGetter();
           init_time = timer;
         }
-        //std::cout << timer_limit << " " << timer << std::endl;
-        //std::cout << targetQueue.size() << std::endl;
         AccelProfile<float> targetObj = targetQueue.front();
         float vel = targetObj(timer, init_time);
         float angle = 0;
@@ -239,9 +236,9 @@ class TargetPosition{
         //-1.0fの場合はそこを挟む点がスプライン補間される
         if(std::get<2>(input_param[i]) != -1.0f){
           float distance = this -> calDistance();
-          //std::cout << std::get<2>(input_param[i]) << " " << "distance = " << distance << std::endl;
-          //std::cout << prev_vel << " " << std::get<2>(input_param[i]) << " " << distance << std::endl;
-          AccelProfile<float> target_point(route_pair(prev_vel, std::get<2>(input_param[i])), distance);
+          AccelParam<float> param;
+          param.set(route_pair(prev_vel, std::get<2>(input_param[i])), distance);
+          AccelProfile<float> target_point(param);
           targetQueue.push(target_point);
           prev_vel = std::get<2>(input_param[i]);
         }
@@ -256,7 +253,7 @@ class TargetPosition{
         if(now_point.first != prev_point.first and now_point.second != prev_point.second){
           //スプライン曲線であった場合
           //残りの座標キューの数が2個以上であるか
-          //pointQueue[0]とpointQueue[1]の間の距離を求める
+          //pointQueue[0]とpointQueue[1]の<<間の距離を求める
           //それぞれの点の間の100個の座標を求めてそれの長さを三平方の定理を使って求めて、全体の長さとして近似する
           float map_counter{};
           float spline_factor = targetRoute -> splineFactorGetter();
@@ -291,15 +288,15 @@ std::vector<route_tuple> routeInit(){
   switch(color){
     case Coat::red1:
       point.push_back(route_tuple(0.0f, 0.0f, 1.0f, 0.0f));
-      point.push_back(route_tuple(20.0f, 0.0f, 2.0f, 0.0f));
-      point.push_back(route_tuple(25.0f, 0.0f, 3.0f, 0.0f));
-      point.push_back(route_tuple(40.0f, 0.0f, 4.0f, 0.0f));
-      point.push_back(route_tuple(40.0f, 20.0f, 5.0f, 0.0f));
-      point.push_back(route_tuple(40.0f, 30.0f, 4.0f, 0.0f));
-      point.push_back(route_tuple(40.0f, 40.0f, 3.0f, 0.0f));
-      point.push_back(route_tuple(40.0f, 50.0f, 2.0f, 0.0f));
+      point.push_back(route_tuple(20.0f, 0.0f, 1.0f, 0.0f));
+      point.push_back(route_tuple(25.0f, 0.0f, 1.0f, 0.0f));
+      point.push_back(route_tuple(40.0f, 0.0f, 1.0f, 0.0f));
+      point.push_back(route_tuple(40.0f, 20.0f, 1.0f, 0.0f));
+      point.push_back(route_tuple(40.0f, 30.0f, 1.0f, 0.0f));
+      point.push_back(route_tuple(40.0f, 40.0f, 1.0f, 0.0f));
+      point.push_back(route_tuple(40.0f, 50.0f, 1.0f, 0.0f));
       point.push_back(route_tuple(40.0f, 60.0f, 1.0f, 0.0f));
-      point.push_back(route_tuple(40.0f, 70.0f, 0.0f, 0.0f));
+      point.push_back(route_tuple(40.0f, 70.0f, 1.0f, 0.0f));
       break;
     case Coat::red2:
       point.push_back(route_tuple(1.0f, 0.1f, 0.0f, 0.0f));
@@ -345,11 +342,13 @@ int main(){
   TargetPosition<float, 90000> targetPoint(routeInit<Coat::red1>());
   auto start = std::chrono::system_clock::now();
   float timer{};
+  std::ofstream outputFile("Accel.txt");
   while(1){
     auto end = std::chrono::system_clock::now(); 
     timer = static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()) / 1000;
-    //std::cout << timer << std::endl;
     target = targetPoint(timer);
-    std::cout << std::get<0>(target) << std::endl;
+    //std::cout << std::get<0>(target) << std::endl;
+    outputFile << std::fixed << std::setprecision(5) << std::get<0>(target) << "\n";
   }
+  outputFile.close();
 }
