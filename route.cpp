@@ -197,10 +197,10 @@ class TargetPosition{
       //目標位置をキューごとで管理する
       float prev_vel{};
       for(int i = 0; i < 10; ++i){
-        if(std::get<2>(input_param[i]) != 'ERR'){
+        //-1.0fの場合はそこを挟む点がスプライン補間される
+        if(std::get<2>(input_param[i]) != -1.0f){
           float distance = this -> calDistance();
           AccelProfile<float> target_point(route_pair(prev_vel, std::get<2>(input_param[i])), distance);
-          //ポインタを外す必要がある
           targetQueue.push(target_point);
           pointQueue.push(route_pair(std::get<0>(input_param[i]), std::get<1>(input_param[i])));
           prev_vel = std::get<2>(input_param[i]);
