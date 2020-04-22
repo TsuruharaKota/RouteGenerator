@@ -149,7 +149,7 @@ class AccelProfile{
           }*/
           float cmd_vel{};
           //std::cout << TIME_INI << std::endl;
-          std::printf("%f %f %f\n", timerLimitGetter(), TIME_INI, time);
+          //std::printf("%f %f %f\n", timerLimitGetter(), TIME_INI, time);
           //std::cout << timerLimitGetter() << " " << time - TIME_INI << std::endl;
           if(time < accel_section_time){
             //加速区間のときの速度
@@ -212,7 +212,7 @@ class TargetPosition{
       if(targetQueue.empty() == false){
         //キューを更新する条件かどうか
         //std::cout << timer_limit << std::endl;
-        //std::cout << "queue size = " << targetQueue.size() << std::endl;
+        std::cout << "queue size = " << targetQueue.size() << "limit = " << timer_limit << "time = " << timer << std::endl;
         if(timer > timer_limit){
           targetQueue.pop();
           AccelProfile<float> targetLimitObj = targetQueue.front();
@@ -240,7 +240,7 @@ class TargetPosition{
         if(std::get<2>(input_param[i]) != -1.0f){
           float distance = this -> calDistance();
           //std::cout << std::get<2>(input_param[i]) << " " << "distance = " << distance << std::endl;
-          std::cout << prev_vel << " " << std::get<2>(input_param[i]) << " " << distance << std::endl;
+          //std::cout << prev_vel << " " << std::get<2>(input_param[i]) << " " << distance << std::endl;
           AccelProfile<float> target_point(route_pair(prev_vel, std::get<2>(input_param[i])), distance);
           targetQueue.push(target_point);
           prev_vel = std::get<2>(input_param[i]);
@@ -350,6 +350,6 @@ int main(){
     timer = static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()) / 1000;
     //std::cout << timer << std::endl;
     target = targetPoint(timer);
-    //std::cout << std::get<0>(target) << std::endl;
+    std::cout << std::get<0>(target) << std::endl;
   }
 }
