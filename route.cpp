@@ -164,9 +164,9 @@ class AccelProfile{
         std::vector<route_pair> dist;
         std::vector<route_tuple> route;
         float TARGET_VEL;
-        float ACCEL = 3.0f; 
-        float VEL_MAX = 9.0f;
-        float VEL_MIN = 0.0f;
+        const float ACCEL = 3.0f; 
+        const float VEL_MAX = 9.0f;
+        const float VEL_MIN = 0.0f;
         float VEL_INI;
         float VEL_FIN;
         float total_distance;
@@ -197,6 +197,7 @@ class TargetPosition{
       targetRoute = new RouteGenerator<float>(param_pos);
       targetRoute -> Main();
       this -> setQueue();
+      std::cout << "finish" << std::endl;
     }
     target_tuple operator()(float timer){
       //入力された時間の位置を出力する
@@ -210,6 +211,7 @@ class TargetPosition{
           timer_limit = timer;
           timer_limit += targetLimitObj.timerLimitGetter(timer);
         }
+        //std::cout << targetQueue.size() << std::endl;
         AccelProfile<float> targetObj = targetQueue.front();
         float vel = targetObj(timer);
         float angle = 0;
@@ -227,7 +229,8 @@ class TargetPosition{
         //-1.0fの場合はそこを挟む点がスプライン補間される
         if(std::get<2>(input_param[i]) != -1.0f){
           float distance = this -> calDistance();
-          std::cout << std::get<2>(input_param[i]) << " " << "distance = " << distance << std::endl;
+          //std::cout << std::get<2>(input_param[i]) << " " << "distance = " << distance << std::endl;
+          std::cout << prev_vel << " " << std::get<2>(input_param[i]) << " " << distance << std::endl;
           AccelProfile<float> target_point(route_pair(prev_vel, std::get<2>(input_param[i])), distance);
           targetQueue.push(target_point);
           prev_vel = std::get<2>(input_param[i]);
