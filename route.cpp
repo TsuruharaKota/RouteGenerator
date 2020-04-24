@@ -215,28 +215,45 @@ class AccelProfile{
 class AngleControl{
   public:
     AngleControl(){std::cout << "fuck" << std::endl;}
-    AngleControl(route_pair _point_ini, route_pair &&_point_fin, RouteGenerator<float> *_targetRoute):point_ini(_point_ini), point_fin(_point_fin), targetRoute(_targetRoute){std::cout << "nice" << std::endl;}
+    AngleControl(route_pair _point_ini, route_pair &&_point_fin, RouteGenerator<float> *_targetRoute):point_ini(_point_ini), point_fin(_point_fin), targetRoute(_targetRoute){
+      std::cout << "nice" << std::endl;
+      if(point_fin.first != point_ini.first and point_fin.second != point_ini.second){
+        spline_factor = targetRoute -> splineFactorGetter(true);
+      }
+    }
     float operator()(float vel_now, float timer_now){
       //移動済みの距離を求める
       static float timer_prev{};
+      static float goal_angle_prev{};
+      static route_pair point_prev = point_ini;
       distance_elapsed += vel_now * (timer_now - timer_prev);
       //移動距離から座標に変換する
       float integral_distance{};
       float dx, dy;
-      route_pair coor_now, coor_prev;
+      route_pair coor_now, coor_prev = point_ini;
       float u_counter{};
       if(point_fin.first != point_ini.first and point_fin.second != point_ini.second){
         //スプライン曲線の場合
-        while(distance_elapsed < integral_distance){
+        while(distance_elapsed > integral_distance){
           //最終点での座標を知りたい
           u_counter += 0.01;
-          float spline_factor = targetRoute -> splineFactorGetter(true);
+          //std::cout << u_counter << std::endl;
           float position_getter_val = route::map<float>(u_counter, 0.0f, 1.0f, 0.0f, spline_factor);
           coor_now = targetRoute -> positionGetterAngle(position_getter_val, u_counter);
           dx = coor_now.first - coor_prev.first;
           dy = coor_now.second - coor_prev.second;
           integral_distance += std::sqrt(dx * dx + dy * dy);
         }
+        //std::cout << coor_now.first << " " << coor_now.second << std::endl;
+        float diff_y = coor_now.second - point_prev.second;
+        float diff_x = coor_now.first - point_prev.first;
+        //std::cout << diff_x << " " << diff_y << std::endl;
+        if(diff_x == 0 and diff_y == 0){return goal_angle_prev;}
+        float goal_angle = atan2(diff_y, diff_x);
+        timer_prev = timer_now;
+        point_prev = coor_now;
+        goal_angle_prev = goal_angle;
+        return goal_angle;  
       }else{
         //スプライン曲線では無い場合
         //std::cout << point_fin.first << " " << point_ini.first << std::endl;
@@ -256,18 +273,11 @@ class AngleControl{
           }
         }
       }
-      route_pair point_now = std::make_pair(coor_now.first, coor_now.second);
-      float diff_y = point_now.second - point_prev.second;
-      float diff_x = point_now.first - point_prev.first;
-      float goal_angle = atan2(diff_y, diff_x);
-      tiemr_prev = timer_now;
-      return goal_angle;  
     }
   private:
     RouteGenerator<float> *targetRoute;
     float distance_elapsed{}; 
-    float tiemr_prev;
-    route_pair point_prev;
+    float spline_factor{};
     route_pair point_ini;
     route_pair point_fin;
 };
@@ -359,6 +369,7 @@ class TargetPosition{
             //std::cout << "temp_pos_now = " << temp_pos_now.first << " " << temp_pos_now.second << std::endl;
             dx = temp_pos_now.first - temp_pos_prev.first;
             dy = temp_pos_now.second - temp_pos_prev.second;
+            //std::cout << "dx = " << dx << " " << "dy = " << dy << std::endl;
             total_distance += std::sqrt((dx * dx) + (dy * dy));
             temp_pos_prev = temp_pos_now;
           }
@@ -442,13 +453,13 @@ int main(){
   TargetPosition<float, 90000> targetPoint(routeInit<Coat::red1>());
   auto start = std::chrono::system_clock::now();
   float timer{};
-  std::ofstream outputFile("Accel.txt");
+  std::ofstream outputFile("Angle.txt");
   while(1){
     auto end = std::chrono::system_clock::now(); 
     timer = static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()) / 1000;
     target = targetPoint(timer);
-    //std::cout << std::get<0>(target) << " " << (std::get<1>(target) / M_PI) * 180 << std::endl;
-    outputFile << std::fixed << std::setprecision(5) << std::get<0>(target) << "\n";
+    std::cout << std::get<0>(target) << " " << (std::get<1>(target) / M_PI) * 180 << std::endl;
+    outputFile << std::fixed << std::setprecision(5) << (std::get<1>(target) / M_PI) * 180 << "\n";
   }
   outputFile.close();
 }
