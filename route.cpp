@@ -29,13 +29,18 @@ enum class Coat{
 template<typename T>
 class SplineParam{
   public:
-    SplineParam(Eigen::Matrix<T, 4, 2> &_param):param(_param){};
+    SplineParam(Eigen::Matrix<T, 4, 2> _param):param(_param){
+      //std::cout << param << std::endl;
+    };
     route_pair splineMain(T fanctor){
-      return (route_pair(param(0, 0) * std::pow(fanctor, 3) + param(1, 0) * std::pow(fanctor, 2) + param(2, 0) * fanctor + param(3, 0), 
-                         param(0, 1) * std::pow(fanctor, 3) + param(1, 1) * std::pow(fanctor, 2) + param(2, 1) * fanctor + param(3, 1))); 
+      //std::cout << "fanctor = " << fanctor << std::endl;
+      //std::cout << param << std::endl;
+      route_pair ans = std::make_pair(param(0, 0) * std::pow(fanctor, 3) + param(1, 0) * std::pow(fanctor, 2) + param(2, 0) * fanctor + param(3, 0), 
+                                      param(0, 1) * std::pow(fanctor, 3) + param(1, 1) * std::pow(fanctor, 2) + param(2, 1) * fanctor + param(3, 1));
+      return ans; 
     }
   private:
-    Eigen::Matrix<T, 4, 2> param;
+    const Eigen::Matrix<T, 4, 2> param;
 };
 template<typename T>
 class RouteGenerator{
@@ -71,13 +76,13 @@ class RouteGenerator{
       return factor;
     }
     route_pair positionGetter(float u_temp, float counter){
-      if(counter == 1){splineObj.pop();}
-      SplineParam<float> tempSplineObj = splineObj.front();
+      if(counter == 100){splineObj.pop();}
+      SplineParam<float> &tempSplineObj = splineObj.front();
       return tempSplineObj.splineMain(u_temp);
     }
     route_pair positionGetterAngle(float u_temp, float counter){
       if(counter == 1){splineAngleObj.pop();}
-      SplineParam<float> tempSplineObj = splineAngleObj.front();
+      SplineParam<float> &tempSplineObj = splineAngleObj.front();
       return tempSplineObj.splineMain(u_temp);
     }
   private:
@@ -115,7 +120,12 @@ class RouteGenerator{
                route[i + 3].first, route[i + 3].second;
           Eigen::ColPivHouseholderQR<Eigen::Matrix4f> dec(A);
           Eigen::Matrix<float, 4, 2> x = A.colPivHouseholderQr().solve(b);
-          splineObj.push(SplineParam<float>(x));
+          //std::cout << "x = " << x << std::endl;
+          SplineParam<float> splineX(x);
+          splineObj.push(splineX);
+          std::cout << "-----------------------------" << std::endl;
+          std::cout << "size now = " << splineObj.size() << std::endl;
+          //splineObj.push(SplineParam<float>(x));
           splineAngleObj.push(SplineParam<float>(x));
           for(float j = u[0]; j <= u[3]; j+= (u[3] - u[0]) / 10){
               route_goal.push_back(route_pair(x(0, 0) * std::pow(j, 3) + x(1, 0) * std::pow(j, 2) + x(2, 0) * j + x(3, 0), 
@@ -339,12 +349,18 @@ class TargetPosition{
           //pointQueue[0]とpointQueue[1]の<<間の距離を求める
           //それぞれの点の間の100個の座標を求めてそれの長さを三平方の定理を使って求めて、全体の長さとして近似する
           float map_counter{};
+          route_pair temp_pos_prev = std::make_pair(prev_point.first, prev_point.second);
           float spline_factor = targetRoute -> splineFactorGetter(false);
+          float dx, dy;
           for(int i = 0; i < 100; ++i){
             map_counter += 0.01;
             float position_getter_val = route::map<float>(map_counter, 0.0f, 1.0f, 0.0f, spline_factor);
-            route_pair temp_pos = targetRoute -> positionGetter(position_getter_val, i);
-            total_distance += std::sqrt((temp_pos.first * temp_pos.first) + (temp_pos.second * temp_pos.second));
+            route_pair temp_pos_now = targetRoute -> positionGetter(position_getter_val, i);
+            //std::cout << "temp_pos_now = " << temp_pos_now.first << " " << temp_pos_now.second << std::endl;
+            dx = temp_pos_now.first - temp_pos_prev.first;
+            dy = temp_pos_now.second - temp_pos_prev.second;
+            total_distance += std::sqrt((dx * dx) + (dy * dy));
+            temp_pos_prev = temp_pos_now;
           }
         }else{
           //スプライン曲線ではない場合
@@ -354,6 +370,7 @@ class TargetPosition{
         prev_point = now_point;
         pointQueue.pop();
       //}
+      std::cout << "total_distance = " << total_distance << std::endl;
       return total_distance;
     }
     RouteGenerator<T> *targetRoute;
@@ -370,16 +387,16 @@ std::vector<route_tuple> routeInit(){
   std::vector<route_tuple> point;
   switch(color){
     case Coat::red1:
-      point.push_back(route_tuple(0.0f, 0.0f, 1.0f, 0.0f));
-      point.push_back(route_tuple(0.0f, 10.0f, 1.0f, 0.0f));
-      point.push_back(route_tuple(0.0f, 15.0f, 1.0f, 0.0f));
-      point.push_back(route_tuple(0.0f, 20.0f, 1.0f, 0.0f));
-      point.push_back(route_tuple(0.0f, 10.0f, 1.0f, 0.0f));
-      point.push_back(route_tuple(0.0f, 5.0f, 1.0f, 0.0f));
-      point.push_back(route_tuple(0.0f, 0.0f, 1.0f, 0.0f));
-      point.push_back(route_tuple(0.0f, 10.0f, 1.0f, 0.0f));
-      point.push_back(route_tuple(0.0f, 20.0f, 1.0f, 0.0f));
-      point.push_back(route_tuple(0.0f, 30.0f, 1.0f, 0.0f));
+      point.push_back(route_tuple( 0.0f,  0.0f,  1.0f, 0.0f));
+      point.push_back(route_tuple( 0.0f, 10.0f,  1.0f, 0.0f));
+      point.push_back(route_tuple( 0.0f, 20.0f,  1.0f, 0.0f));
+      point.push_back(route_tuple( 0.0f, 30.0f,  1.0f, 0.0f));
+      point.push_back(route_tuple( 1.5f, 35.0f, -1.0f, 0.0f));
+      point.push_back(route_tuple( 5.0f, 39.0f, -1.0f, 0.0f));
+      point.push_back(route_tuple(10.0f, 40.0f,  1.0f, 0.0f));
+      point.push_back(route_tuple(20.0f, 40.0f,  1.0f, 0.0f));
+      point.push_back(route_tuple(30.0f, 40.0f,  1.0f, 0.0f));
+      point.push_back(route_tuple(40.0f, 40.0f,  1.0f, 0.0f));
       break;
     case Coat::red2:
       point.push_back(route_tuple(1.0f, 0.1f, 0.0f, 0.0f));
@@ -430,7 +447,7 @@ int main(){
     auto end = std::chrono::system_clock::now(); 
     timer = static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()) / 1000;
     target = targetPoint(timer);
-    std::cout << std::get<0>(target) << " " << (std::get<1>(target) / M_PI) * 180 << std::endl;
+    //std::cout << std::get<0>(target) << " " << (std::get<1>(target) / M_PI) * 180 << std::endl;
     outputFile << std::fixed << std::setprecision(5) << std::get<0>(target) << "\n";
   }
   outputFile.close();
