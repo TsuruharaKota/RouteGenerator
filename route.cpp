@@ -16,7 +16,7 @@ using route_tuple = std::tuple<float, float, float, float>;
 namespace route{
   template<typename T>
   inline T map(T x, T in_min, T in_max, T out_min, T out_max){
-    if(x > in_max or x < in_min){std::cerr << "this value is over range" << std::endl;}
+    //if(x > in_max or x < in_min){std::cerr << "this value is over range" << std::endl;}
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
   }
 }
@@ -223,10 +223,13 @@ class AngleControl{
     }
     float operator()(float vel_now, float timer_now){
       //移動済みの距離を求める
-      static float timer_prev{};
       static float goal_angle_prev{};
       static route_pair point_prev = point_ini;
       distance_elapsed += vel_now * (timer_now - timer_prev);
+      if(vel_now < 0 or timer_now - timer_prev < 0){
+        std::cout << vel_now << " " << timer_now - timer_prev << " " << timer_now << " " << timer_prev << std::endl;
+      }
+      timer_prev = timer_now;
       //移動距離から座標に変換する
       float integral_distance{};
       float dx, dy;
@@ -234,23 +237,34 @@ class AngleControl{
       float u_counter{};
       if(point_fin.first != point_ini.first and point_fin.second != point_ini.second){
         //スプライン曲線の場合
+        float u;
         while(distance_elapsed > integral_distance){
+        //while(u <= 1.00){
+          //std::cout << "u_counter = " << u_counter << std::endl;
           //最終点での座標を知りたい
+          //coor_nowがしっかりと更新されてない
+          //std::cout << "u_counter = " << u_counter << std::endl;
           u_counter += 0.01;
-          //std::cout << u_counter << std::endl;
-          float position_getter_val = route::map<float>(u_counter, 0.0f, 1.0f, 0.0f, spline_factor);
+          u = floor(u_counter * 100) / 100;
+          float position_getter_val = route::map<float>(u, 0.0f, 1.0f, 0.0f, spline_factor);
           coor_now = targetRoute -> positionGetterAngle(position_getter_val, u_counter);
           dx = coor_now.first - coor_prev.first;
           dy = coor_now.second - coor_prev.second;
-          integral_distance += std::sqrt(dx * dx + dy * dy);
+          //std::cout << "dx = " << dx << " dy = " << dy << std::endl;
+          integral_distance += std::sqrt((dx * dx) + (dy * dy));
+          //std::cout << "integral_distance = " << integral_distance << " u = " << u<< std::endl;
+          //std::cout << "dx = " << dx << " dy = " << dy << std::endl;
+          coor_prev = coor_now;
         }
+        //std::cout << "distant_elapsed = " << distance_elapsed << " in = " << integral_distance << std::endl;
         //std::cout << coor_now.first << " " << coor_now.second << std::endl;
         float diff_y = coor_now.second - point_prev.second;
         float diff_x = coor_now.first - point_prev.first;
         //std::cout << diff_x << " " << diff_y << std::endl;
+        //std::cout <<  "goal_angle = " << (goal_angle_prev / M_PI) * 180 << std::endl;
         if(diff_x == 0 and diff_y == 0){return goal_angle_prev;}
         float goal_angle = atan2(diff_y, diff_x);
-        timer_prev = timer_now;
+        if(goal_angle < 0)goal_angle += 2 * M_PI; //M_PI ~ -M_PI の範囲を0 ~ 2M_PIに変更する
         point_prev = coor_now;
         goal_angle_prev = goal_angle;
         return goal_angle;  
@@ -260,15 +274,19 @@ class AngleControl{
         if(point_fin.first == point_ini.first){
           if(point_fin.second > point_ini.second){
             //std::cout << "ok" << std::endl;
+            goal_angle_prev = 0.5 * M_PI;
             return 0.5 * M_PI;
           }else{
             //std::cout << "ok" << std::endl;
+            goal_angle_prev = 1.5 * M_PI;
             return 1.5 * M_PI;
           }
         }else{
           if(point_fin.first > point_ini.first){
+            goal_angle_prev = 0;
             return 0;
           }else{
+            goal_angle_prev = M_PI;
             return M_PI;
           }
         }
@@ -280,6 +298,7 @@ class AngleControl{
     float spline_factor{};
     route_pair point_ini;
     route_pair point_fin;
+    float timer_prev{};
 };
 template<typename T, long long N>
 class TargetPosition{
@@ -310,6 +329,7 @@ class TargetPosition{
           timer_limit = timer;
           timer_limit += targetLimitObj.timerLimitGetter();
           init_time = timer;
+          std::cout << "-----------------" << std::endl;
           //----------angle object----------//
           angleQueue.pop();
           targetAngle = angleQueue.front();
