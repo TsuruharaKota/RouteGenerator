@@ -10,6 +10,7 @@
 #include<cmath>
 #include<iomanip>
 #include<queue>
+//ここをセットする
 using route_pair = std::pair<float, float>;
 using target_tuple = std::tuple<float, float, float>;
 using route_tuple = std::tuple<float, float, float, float>;
@@ -60,9 +61,9 @@ class RouteGenerator{
         }
       }
     }
-    float splineFactorGetter(bool &&check_angle){
+    T splineFactorGetter(bool &&check_angle){
       //check_angle == trueの場合は角度制御用のキュー
-      float factor;
+      T factor;
       if(check_angle == false){
         factor = spline_factor.front();
         spline_factor.pop();
@@ -72,14 +73,14 @@ class RouteGenerator{
       }
       return factor;
     }
-    route_pair positionGetter(float u_temp, float counter){
+    route_pair positionGetter(T u_temp, T counter){
       if(counter == 100){splineObj.pop();}
-      SplineParam<float> &tempSplineObj = splineObj.front();
+      SplineParam<T> &tempSplineObj = splineObj.front();
       return tempSplineObj.splineMain(u_temp);
     }
-    route_pair positionGetterAngle(float u_temp, float counter){
+    route_pair positionGetterAngle(T u_temp, T counter){
       if(counter == 1){splineAngleObj.pop();}
-      SplineParam<float> &tempSplineObj = splineAngleObj.front();
+      SplineParam<T> &tempSplineObj = splineAngleObj.front();
       return tempSplineObj.splineMain(u_temp);
     }
   private:
@@ -87,15 +88,15 @@ class RouteGenerator{
       for(int i = 0; i < 9; ++i){
         if((route[i].first != route[i + 1].first) && (route[i].second == route[i + 1].second)){
           //----------X Linear interpolation----------//
-          float devide_x = (route[i + 1].first - route[i].first) / 5;
+          T devide_x = (route[i + 1].first - route[i].first) / 5;
           for(int j = 0; j < 5; ++j){route_goal.push_back(route_pair(route[i].first + (devide_x * j), route[i].second));}
         }else if((route[i].first == route[i + 1].first) && (route[i].second != route[i + 1].second)){
           //----------Y Linear interpolation----------//
-          float devide_y = (route[i + 1].second - route[i].second) / 5;
+          T devide_y = (route[i + 1].second - route[i].second) / 5;
           for(int j = 0; j < 5; ++j){route_goal.push_back(route_pair(route[i].first, route[i].second + (devide_y * j)));}
         }else{
           //Curve interpolation
-          std::array<float, 4> u;
+          std::array<T, 4> u;
           for(int j = 0; j < 4; ++j){
             if(j == 0){
               u[j] = 0;
@@ -109,20 +110,20 @@ class RouteGenerator{
                std::pow(u[1], 3), std::pow(u[1], 2), u[1], 1,
                std::pow(u[2], 3), std::pow(u[2], 2), u[2], 1,
                std::pow(u[3], 3), std::pow(u[3], 2), u[3], 1;
-          Eigen::Matrix<float, 4, 2> b;
+          Eigen::Matrix<T, 4, 2> b;
           b << route[i    ].first, route[i    ].second,
                route[i + 1].first, route[i + 1].second,
                route[i + 2].first, route[i + 2].second,
                route[i + 3].first, route[i + 3].second;
           Eigen::ColPivHouseholderQR<Eigen::Matrix4f> dec(A);
-          Eigen::Matrix<float, 4, 2> x = A.colPivHouseholderQr().solve(b);
+          Eigen::Matrix<T, 4, 2> x = A.colPivHouseholderQr().solve(b);
           //std::cout << "x = " << x << std::endl;
-          SplineParam<float> splineX(x);
+          SplineParam<T> splineX(x);
           splineObj.push(splineX);
           std::cout << "-----------------------------" << std::endl;
           std::cout << "size now = " << splineObj.size() << std::endl;
-          splineAngleObj.push(SplineParam<float>(x));
-          for(float j = u[0]; j <= u[3]; j+= (u[3] - u[0]) / 10){
+          splineAngleObj.push(SplineParam<T>(x));
+          for(T j = u[0]; j <= u[3]; j+= (u[3] - u[0]) / 10){
               route_goal.push_back(route_pair(x(0, 0) * std::pow(j, 3) + x(1, 0) * std::pow(j, 2) + x(2, 0) * j + x(3, 0), 
                                               x(0, 1) * std::pow(j, 3) + x(1, 1) * std::pow(j, 2) + x(2, 1) * j + x(3, 1))); 
           }
@@ -139,13 +140,13 @@ class RouteGenerator{
       outputFile.close();
       return true;
     }
-    float time;
+    T time;
     std::vector<route_pair> route;
     std::vector<route_pair> route_goal;
-    std::queue<float> spline_factor;
-    std::queue<float> angle_factor;
-    std::queue<SplineParam<float>> splineObj;
-    std::queue<SplineParam<float>> splineAngleObj;
+    std::queue<T> spline_factor;
+    std::queue<T> angle_factor;
+    std::queue<SplineParam<T>> splineObj;
+    std::queue<SplineParam<T>> splineAngleObj;
 };
 template<typename T>
 struct AccelParam{
@@ -183,14 +184,14 @@ template<typename T>
 class AccelProfile{
     public:
         AccelProfile(AccelParam<T> _paramObj):paramObj(_paramObj){}
-        float operator()(float time, float TIME_INI){
-          float cmd_vel{};
+        T operator()(T time, T TIME_INI){
+          T cmd_vel{};
           if(time - TIME_INI < paramObj.accel_section_time){
             //加速区間のときの速度
             cmd_vel = paramObj.VEL_INI + paramObj.ACCEL * (time - TIME_INI);
           }else if(time - TIME_INI > paramObj.accel_section_time + paramObj.constant_vel_section_time){
             //減速区間のときの速度
-            float limit = this -> timerLimitGetter();
+            T limit = this -> timerLimitGetter();
             cmd_vel = paramObj.VEL_FIN + paramObj.ACCEL * (limit - (time - TIME_INI)); 
           }else{
             //等速区間のときの速度
@@ -198,7 +199,7 @@ class AccelProfile{
           }
           return cmd_vel;
         }
-        float timerLimitGetter(){
+        T timerLimitGetter(){
           return paramObj.accel_section_time + paramObj.decel_section_time + paramObj.constant_vel_section_time;
         }
     private:
@@ -207,19 +208,19 @@ class AccelProfile{
         std::vector<route_pair> dist;
         std::vector<route_tuple> route;
 };
-//template<typename T>
+template<typename T>
 class AngleControl{
   public:
     AngleControl(){std::cout << "fuck" << std::endl;}
-    AngleControl(route_pair _point_ini, route_pair &&_point_fin, RouteGenerator<float> *_targetRoute):point_ini(_point_ini), point_fin(_point_fin), targetRoute(_targetRoute){
+    AngleControl(route_pair _point_ini, route_pair &&_point_fin, RouteGenerator<T> *_targetRoute):point_ini(_point_ini), point_fin(_point_fin), targetRoute(_targetRoute){
       std::cout << "nice" << std::endl;
       if(point_fin.first != point_ini.first and point_fin.second != point_ini.second){
         spline_factor = targetRoute -> splineFactorGetter(true);
       }
     }
-    float operator()(float vel_now, float timer_now){
+    T operator()(T vel_now, T timer_now){
       //移動済みの距離を求める
-      static float goal_angle_prev{};
+      static T goal_angle_prev{};
       static route_pair point_prev = point_ini;
       distance_elapsed += vel_now * (timer_now - timer_prev);
       if(vel_now < 0 or timer_now - timer_prev < 0){
@@ -227,28 +228,28 @@ class AngleControl{
       }
       timer_prev = timer_now;
       //移動距離から座標に変換する
-      float integral_distance{};
-      float dx, dy;
+      T integral_distance{};
+      T dx, dy;
       route_pair coor_now, coor_prev = point_ini;
-      float u_counter{};
+      T u_counter{};
       if(point_fin.first != point_ini.first and point_fin.second != point_ini.second){
         //スプライン曲線の場合
-        float u;
+        T u;
         while(distance_elapsed > integral_distance){
           //最終点での座標を知りたい
           u_counter += 0.01;
           u = floor(u_counter * 100) / 100;
-          float position_getter_val = route::map<float>(u, 0.0f, 1.0f, 0.0f, spline_factor);
+          T position_getter_val = route::map<T>(u, 0.0f, 1.0f, 0.0f, spline_factor);
           coor_now = targetRoute -> positionGetterAngle(position_getter_val, u_counter);
           dx = coor_now.first - coor_prev.first;
           dy = coor_now.second - coor_prev.second;
           integral_distance += std::sqrt((dx * dx) + (dy * dy));
           coor_prev = coor_now;
         }
-        float diff_y = coor_now.second - point_prev.second;
-        float diff_x = coor_now.first - point_prev.first;
+        T diff_y = coor_now.second - point_prev.second;
+        T diff_x = coor_now.first - point_prev.first;
         if(diff_x == 0 and diff_y == 0){return goal_angle_prev;}
-        float goal_angle = atan2(diff_y, diff_x);
+        T goal_angle = atan2(diff_y, diff_x);
         if(goal_angle < 0)goal_angle += 2 * M_PI; //M_PI ~ -M_PI の範囲を0 ~ 2M_PIに変更する
         point_prev = coor_now;
         goal_angle_prev = goal_angle;
@@ -275,12 +276,12 @@ class AngleControl{
       }
     }
   private:
-    RouteGenerator<float> *targetRoute;
-    float distance_elapsed{}; 
-    float spline_factor{};
+    RouteGenerator<T> *targetRoute;
+    T distance_elapsed{}; 
+    T spline_factor{};
     route_pair point_ini;
     route_pair point_fin;
-    float timer_prev{};
+    T timer_prev{};
 };
 template<typename T>
 class AngularControl{
@@ -296,7 +297,7 @@ class AngularControl{
   private:
     T angular_vel;
 };
-template<typename T, long long N>
+template<typename T, int N>
 class TargetPosition{
   public:
     TargetPosition(std::vector<route_tuple>&& _input_param):input_param(_input_param){
@@ -308,12 +309,12 @@ class TargetPosition{
           pointQueue.push(route_pair(std::get<0>(input_param[i]), std::get<1>(input_param[i])));
         }
       }
-      targetRoute = new RouteGenerator<float>(param_pos);
+      targetRoute = new RouteGenerator<T>(param_pos);
       targetRoute -> Main();
       this -> setQueue();
       std::cout << "finish" << std::endl;
     }
-    target_tuple operator()(float timer){
+    target_tuple operator()(T timer){
       //入力された時間の位置を出力する
       if(targetQueue.empty() == false){
         //キューを更新する条件かどうか
@@ -321,7 +322,7 @@ class TargetPosition{
         if(timer > timer_limit){
           //----------accel object----------//
           targetQueue.pop();
-          AccelProfile<float> targetLimitObj = targetQueue.front();
+          AccelProfile<T> targetLimitObj = targetQueue.front();
           timer_limit = timer;
           timer_limit += targetLimitObj.timerLimitGetter();
           init_time = timer;
@@ -333,10 +334,10 @@ class TargetPosition{
           angularQueue.pop();
           targetAngular = angularQueue.front();
         }
-        AccelProfile<float> targetObj = targetQueue.front();
-        float vel = targetObj(timer, init_time);
-        float angle = targetAngle(vel, timer - init_time);
-        float angular_vel = targetAngular();
+        AccelProfile<T> targetObj = targetQueue.front();
+        T vel = targetObj(timer, init_time);
+        T angle = targetAngle(vel, timer - init_time);
+        T angular_vel = targetAngular();
         return target_tuple(vel, angle, angular_vel); 
       }else{
         return target_tuple(0.0f, 0.0f, 0.0f);
@@ -345,34 +346,34 @@ class TargetPosition{
   private:
     void setQueue(){
       //目標位置をキューごとで管理する
-      float prev_vel{};
-      float angle_prev{};
+      T prev_vel{};
+      T angle_prev{};
       route_pair point_prev{};
       for(int i = 0; i < 10; ++i){
         //-1.0fの場合はそこを挟む点がスプライン補間される
         if(std::get<2>(input_param[i]) != -1.0f){
-          float distance = this -> calDistance();
-          AccelParam<float> param;
+          T distance = this -> calDistance();
+          AccelParam<T> param;
           //----------set accel object queue----------//
           param.set(route_pair(prev_vel, std::get<2>(input_param[i])), distance);
-          AccelProfile<float> target_point(param);
+          AccelProfile<T> target_point(param);
           targetQueue.push(target_point);
           //----------finish accel object queue----------//
           //----------set angle object queue----------//
-          AngleControl angle(point_prev, route_pair(std::get<0>(input_param[i]), std::get<1>(input_param[i])), targetRoute);
+          AngleControl<T> angle(point_prev, route_pair(std::get<0>(input_param[i]), std::get<1>(input_param[i])), targetRoute);
           angleQueue.push(angle);     
           prev_vel = std::get<2>(input_param[i]);
           point_prev = std::make_pair(std::get<0>(input_param[i]), std::get<1>(input_param[i]));
           //----------finish angle object queue----------//
           //----------set angular object queue----------//
-          AngularControl<float> target_angular(angle_prev, std::get<3>(input_param[i]), param.time_total);
+          AngularControl<T> target_angular(angle_prev, std::get<3>(input_param[i]), param.time_total);
           angularQueue.push(target_angular);
           angle_prev = std::get<3>(input_param[i]);
         }
       }
     }
-    float calDistance(){
-      float total_distance{};
+    T calDistance(){
+      T total_distance{};
       static route_pair prev_point{};
       route_pair now_point = pointQueue.front();
       //この条件式いらないかも
@@ -382,13 +383,13 @@ class TargetPosition{
           //残りの座標キューの数が2個以上であるか
           //pointQueue[0]とpointQueue[1]の<<間の距離を求める
           //それぞれの点の間の100個の座標を求めてそれの長さを三平方の定理を使って求めて、全体の長さとして近似する
-          float map_counter{};
+          T map_counter{};
           route_pair temp_pos_prev = std::make_pair(prev_point.first, prev_point.second);
-          float spline_factor = targetRoute -> splineFactorGetter(false);
-          float dx, dy;
+          T spline_factor = targetRoute -> splineFactorGetter(false);
+          T dx, dy;
           for(int i = 0; i < 100; ++i){
             map_counter += 0.01;
-            float position_getter_val = route::map<float>(map_counter, 0.0f, 1.0f, 0.0f, spline_factor);
+            T position_getter_val = route::map<T>(map_counter, 0.0f, 1.0f, 0.0f, spline_factor);
             route_pair temp_pos_now = targetRoute -> positionGetter(position_getter_val, i);
             //std::cout << "temp_pos_now = " << temp_pos_now.first << " " << temp_pos_now.second << std::endl;
             dx = temp_pos_now.first - temp_pos_prev.first;
@@ -409,15 +410,15 @@ class TargetPosition{
       return total_distance;
     }
     RouteGenerator<T> *targetRoute;
-    AngleControl targetAngle;
-    AngularControl<float> targetAngular;
+    AngleControl<T> targetAngle;
+    AngularControl<T> targetAngular;
     std::vector<route_tuple> input_param;
-    std::queue<AccelProfile<float>> targetQueue;
-    std::queue<AngleControl> angleQueue;
-    std::queue<AngularControl<float>> angularQueue;
+    std::queue<AccelProfile<T>> targetQueue;
+    std::queue<AngleControl<T>> angleQueue;
+    std::queue<AngularControl<T>> angularQueue;
     std::queue<route_pair> pointQueue;
-    float timer_limit{};
-    float init_time{};
+    T timer_limit{};
+    T init_time{};
 };
 template<Coat color>
 std::vector<route_tuple> routeInit(){
@@ -476,7 +477,7 @@ std::vector<route_tuple> routeInit(){
 }
 int main(){
   target_tuple target;
-  TargetPosition<float, 90000> targetPoint(routeInit<Coat::red1>());
+  TargetPosition<float, 10> targetPoint(routeInit<Coat::red1>());
   auto start = std::chrono::system_clock::now();
   float timer{};
   std::ofstream outputFile("Angle.txt");
