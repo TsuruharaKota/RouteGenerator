@@ -10,6 +10,7 @@
 #include<cmath>
 #include<iomanip>
 #include<queue>
+//ここをセットする
 using route_pair = std::pair<float, float>;
 using target_tuple = std::tuple<float, float, float>;
 using route_tuple = std::tuple<float, float, float, float>;
@@ -296,7 +297,7 @@ class AngularControl{
   private:
     T angular_vel;
 };
-template<typename T, long long N>
+template<typename T, int N>
 class TargetPosition{
   public:
     TargetPosition(std::vector<route_tuple>&& _input_param):input_param(_input_param){
@@ -476,7 +477,7 @@ std::vector<route_tuple> routeInit(){
 }
 int main(){
   target_tuple target;
-  TargetPosition<float, 90000> targetPoint(routeInit<Coat::red1>());
+  TargetPosition<float, 10> targetPoint(routeInit<Coat::red1>());
   auto start = std::chrono::system_clock::now();
   float timer{};
   std::ofstream outputFile("Angle.txt");
