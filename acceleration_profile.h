@@ -4,6 +4,7 @@
 using route_pair = std::pair<float, float>;
 //----------<x, y, initial speed, final speed>----------//
 using route_tuple = std::tuple<float, float, float, float>;
+template<typename T>
 class accelProfile{
     public:
         accelProfile(accelParam &_param):param(_param){}
@@ -22,14 +23,21 @@ class accelProfile{
             }
         }
     private:
-        constexpr float calDistance(){
+        float calDistance(){
             float temp_distance{};
-            for(int i = 0; i < 100; ++i){
-                float x = [i];
-                float y = [i];
-                temp_distance += std::sqrt((x * x) + (y * y));
+            if(isSpline()){
+                for(int i = 0; i < 100; ++i){
+                    float x = [i];
+                    float y = [i];
+                    temp_distance += std::sqrt((x * x) + (y * y));
+                }
+            }else{
+                x_fin == x_ini ? temp_distance = y_fin - y_ini : x_fin - x_ini;
             }
             return temp_distance;
+        }
+        bool isSpline(){
+            if(std::tuple::get<2>())
         }
         vector<route_pair> dist;
         std::vector<route_tuple> route;
@@ -37,5 +45,5 @@ class accelProfile{
         constexpr float ACCEL; 
         constexpr float VEL_MAX;
         constexpr float VEL_MIN;
-}
+};
 #endif ACCELE
