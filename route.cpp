@@ -16,7 +16,7 @@ using route_tuple = std::tuple<float, float, float, float>;
 namespace route{
   template<typename T>
   inline T map(T x, T in_min, T in_max, T out_min, T out_max){
-    //if(x > in_max or x < in_min){std::cerr << "this value is over range" << std::endl;}
+    if(x > in_max or x < in_min){std::cerr << "this value is over range" << std::endl;}
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
   }
 }
@@ -30,11 +30,8 @@ template<typename T>
 class SplineParam{
   public:
     SplineParam(Eigen::Matrix<T, 4, 2> _param):param(_param){
-      //std::cout << param << std::endl;
     };
     route_pair splineMain(T fanctor){
-      //std::cout << "fanctor = " << fanctor << std::endl;
-      //std::cout << param << std::endl;
       route_pair ans = std::make_pair(param(0, 0) * std::pow(fanctor, 3) + param(1, 0) * std::pow(fanctor, 2) + param(2, 0) * fanctor + param(3, 0), 
                                       param(0, 1) * std::pow(fanctor, 3) + param(1, 1) * std::pow(fanctor, 2) + param(2, 1) * fanctor + param(3, 1));
       return ans; 
@@ -103,7 +100,6 @@ class RouteGenerator{
             if(j == 0){
               u[j] = 0;
             }else{
-              //u[j] = uCal(u, i, j);
               u[j] = u[j - 1] + std::sqrt(std::pow(route[i + j].first - route[i + j - 1].first, 2) + 
                      std::pow(route[i + j].second - route[i + j - 1].second, 2));
             }
@@ -125,7 +121,6 @@ class RouteGenerator{
           splineObj.push(splineX);
           std::cout << "-----------------------------" << std::endl;
           std::cout << "size now = " << splineObj.size() << std::endl;
-          //splineObj.push(SplineParam<float>(x));
           splineAngleObj.push(SplineParam<float>(x));
           for(float j = u[0]; j <= u[3]; j+= (u[3] - u[0]) / 10){
               route_goal.push_back(route_pair(x(0, 0) * std::pow(j, 3) + x(1, 0) * std::pow(j, 2) + x(2, 0) * j + x(3, 0), 
@@ -188,7 +183,6 @@ class AccelProfile{
         AccelProfile(AccelParam<T> _paramObj):paramObj(_paramObj){}
         float operator()(float time, float TIME_INI){
           float cmd_vel{};
-          //std::cout << time - TIME_INI << " " << paramObj.accel_section_time << " " << paramObj.constant_vel_section_time << std::endl;
           if(time - TIME_INI < paramObj.accel_section_time){
             //加速区間のときの速度
             cmd_vel = paramObj.VEL_INI + paramObj.ACCEL * (time - TIME_INI);
@@ -239,29 +233,18 @@ class AngleControl{
         //スプライン曲線の場合
         float u;
         while(distance_elapsed > integral_distance){
-        //while(u <= 1.00){
-          //std::cout << "u_counter = " << u_counter << std::endl;
           //最終点での座標を知りたい
-          //coor_nowがしっかりと更新されてない
-          //std::cout << "u_counter = " << u_counter << std::endl;
           u_counter += 0.01;
           u = floor(u_counter * 100) / 100;
           float position_getter_val = route::map<float>(u, 0.0f, 1.0f, 0.0f, spline_factor);
           coor_now = targetRoute -> positionGetterAngle(position_getter_val, u_counter);
           dx = coor_now.first - coor_prev.first;
           dy = coor_now.second - coor_prev.second;
-          //std::cout << "dx = " << dx << " dy = " << dy << std::endl;
           integral_distance += std::sqrt((dx * dx) + (dy * dy));
-          //std::cout << "integral_distance = " << integral_distance << " u = " << u<< std::endl;
-          //std::cout << "dx = " << dx << " dy = " << dy << std::endl;
           coor_prev = coor_now;
         }
-        //std::cout << "distant_elapsed = " << distance_elapsed << " in = " << integral_distance << std::endl;
-        //std::cout << coor_now.first << " " << coor_now.second << std::endl;
         float diff_y = coor_now.second - point_prev.second;
         float diff_x = coor_now.first - point_prev.first;
-        //std::cout << diff_x << " " << diff_y << std::endl;
-        //std::cout <<  "goal_angle = " << (goal_angle_prev / M_PI) * 180 << std::endl;
         if(diff_x == 0 and diff_y == 0){return goal_angle_prev;}
         float goal_angle = atan2(diff_y, diff_x);
         if(goal_angle < 0)goal_angle += 2 * M_PI; //M_PI ~ -M_PI の範囲を0 ~ 2M_PIに変更する
@@ -270,14 +253,11 @@ class AngleControl{
         return goal_angle;  
       }else{
         //スプライン曲線では無い場合
-        //std::cout << point_fin.first << " " << point_ini.first << std::endl;
         if(point_fin.first == point_ini.first){
           if(point_fin.second > point_ini.second){
-            //std::cout << "ok" << std::endl;
             goal_angle_prev = 0.5 * M_PI;
             return 0.5 * M_PI;
           }else{
-            //std::cout << "ok" << std::endl;
             goal_angle_prev = 1.5 * M_PI;
             return 1.5 * M_PI;
           }
