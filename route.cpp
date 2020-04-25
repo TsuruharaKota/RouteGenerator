@@ -161,6 +161,7 @@ struct AccelParam{
   T decel_section_pos;
   T constant_vel_section_pos;
   T constant_vel_section_time;
+  T time_total;
   void set(route_pair &&_param, T _total_distance){
     //----------route_pair(VEL_INI, VEL_FIN)----------//
     VEL_INI = _param.first;
@@ -175,6 +176,7 @@ struct AccelParam{
     if(constant_vel_section_time == 0){
       //等速区間に達しない場合の例外処理
     }
+    time_total = accel_section_time + constant_vel_section_time + decel_section_time;
   }
 };
 template<typename T>
@@ -280,6 +282,20 @@ class AngleControl{
     route_pair point_fin;
     float timer_prev{};
 };
+template<typename T>
+class AngularControl{
+  public:
+    AngularControl(){}
+    AngularControl(T _angle_prev, T _angle_now, T _timer_total){
+      angular_vel = (_angle_now - _angle_prev) / _timer_total;
+      std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+    }
+    T operator()(){
+      return angular_vel;
+    }
+  private:
+    T angular_vel;
+};
 template<typename T, long long N>
 class TargetPosition{
   public:
@@ -313,11 +329,14 @@ class TargetPosition{
           //----------angle object----------//
           angleQueue.pop();
           targetAngle = angleQueue.front();
+          //----------angular object----------//
+          angularQueue.pop();
+          targetAngular = angularQueue.front();
         }
         AccelProfile<float> targetObj = targetQueue.front();
         float vel = targetObj(timer, init_time);
         float angle = targetAngle(vel, timer - init_time);
-        float angular_vel = 0;
+        float angular_vel = targetAngular();
         return target_tuple(vel, angle, angular_vel); 
       }else{
         return target_tuple(0.0f, 0.0f, 0.0f);
@@ -327,6 +346,7 @@ class TargetPosition{
     void setQueue(){
       //目標位置をキューごとで管理する
       float prev_vel{};
+      float angle_prev{};
       route_pair point_prev{};
       for(int i = 0; i < 10; ++i){
         //-1.0fの場合はそこを挟む点がスプライン補間される
@@ -344,6 +364,10 @@ class TargetPosition{
           prev_vel = std::get<2>(input_param[i]);
           point_prev = std::make_pair(std::get<0>(input_param[i]), std::get<1>(input_param[i]));
           //----------finish angle object queue----------//
+          //----------set angular object queue----------//
+          AngularControl<float> target_angular(angle_prev, std::get<3>(input_param[i]), param.time_total);
+          angularQueue.push(target_angular);
+          angle_prev = std::get<3>(input_param[i]);
         }
       }
     }
@@ -386,9 +410,11 @@ class TargetPosition{
     }
     RouteGenerator<T> *targetRoute;
     AngleControl targetAngle;
+    AngularControl<float> targetAngular;
     std::vector<route_tuple> input_param;
     std::queue<AccelProfile<float>> targetQueue;
     std::queue<AngleControl> angleQueue;
+    std::queue<AngularControl<float>> angularQueue;
     std::queue<route_pair> pointQueue;
     float timer_limit{};
     float init_time{};
@@ -398,16 +424,16 @@ std::vector<route_tuple> routeInit(){
   std::vector<route_tuple> point;
   switch(color){
     case Coat::red1:
-      point.push_back(route_tuple( 0.0f,  0.0f,  1.0f, 0.0f));
-      point.push_back(route_tuple( 0.0f, 10.0f,  1.0f, 0.0f));
-      point.push_back(route_tuple( 0.0f, 20.0f,  1.0f, 0.0f));
-      point.push_back(route_tuple( 0.0f, 30.0f,  1.0f, 0.0f));
-      point.push_back(route_tuple( 1.5f, 35.0f, -1.0f, 0.0f));
-      point.push_back(route_tuple( 5.0f, 39.0f, -1.0f, 0.0f));
-      point.push_back(route_tuple(10.0f, 40.0f,  1.0f, 0.0f));
-      point.push_back(route_tuple(20.0f, 40.0f,  1.0f, 0.0f));
-      point.push_back(route_tuple(30.0f, 40.0f,  1.0f, 0.0f));
-      point.push_back(route_tuple(40.0f, 40.0f,  1.0f, 0.0f));
+      point.push_back(route_tuple( 0.0f,  0.0f,  1.0f,   0.0f));
+      point.push_back(route_tuple( 0.0f, 10.0f,  1.0f,  30.0f));
+      point.push_back(route_tuple( 0.0f, 20.0f,  1.0f,  40.0f));
+      point.push_back(route_tuple( 0.0f, 30.0f,  1.0f,  50.0f));
+      point.push_back(route_tuple( 1.5f, 35.0f, -1.0f,  60.0f));
+      point.push_back(route_tuple( 5.0f, 39.0f, -1.0f,  70.0f));
+      point.push_back(route_tuple(10.0f, 40.0f,  1.0f,  80.0f));
+      point.push_back(route_tuple(20.0f, 40.0f,  1.0f,  90.0f));
+      point.push_back(route_tuple(30.0f, 40.0f,  1.0f, 100.0f));
+      point.push_back(route_tuple(40.0f, 40.0f,  1.0f, 110.0f));
       break;
     case Coat::red2:
       point.push_back(route_tuple(1.0f, 0.1f, 0.0f, 0.0f));
@@ -458,7 +484,7 @@ int main(){
     auto end = std::chrono::system_clock::now(); 
     timer = static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()) / 1000;
     target = targetPoint(timer);
-    std::cout << std::get<0>(target) << " " << (std::get<1>(target) / M_PI) * 180 << std::endl;
+    std::cout << std::get<0>(target) << " " << (std::get<1>(target) / M_PI) * 180 << " " << std::get<2>(target) << std::endl;
     outputFile << std::fixed << std::setprecision(5) << (std::get<1>(target) / M_PI) * 180 << "\n";
   }
   outputFile.close();
