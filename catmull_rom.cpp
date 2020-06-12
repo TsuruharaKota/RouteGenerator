@@ -54,20 +54,53 @@ class CatmullRomSpline{
         }
         void operator()(){
             //始点通過、終点通過、一般経路を分類
-            //全体としてのtからそれぞれのtに分類する必要があるかも？？
-            //区間距離キューを管理(それぞれの関数
-            cout << transit_point.size() << endl;
-            for(int route_counter = 0; route_counter < transit_point.size() - 1; ++route_counter){
-                if(route_counter == 0){
-                    //始点通過
-                    CatmullRomFirst(route_counter);
-                }else if(route_counter == transit_point.size() - 2){
-                    //終点通過
-                    CatmullRomLast(route_counter);
+            for(int counter = 0; counter < transit_point.size() - 1; ++counter){
+                cal_L = 0;
+                auto NomalCal = [&](int n, float p0, float p1, float p2, float p3){
+                    a[n] = -p0 + 3.0f * p1 - 3.0f * p2 + p3;
+                    b[n] = 2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3;
+                    c[n] = -p0 + p2;
+                    d[n] = 2.0f * p1;
+                };
+                auto FirstCal = [&](int n, float p0, float p1, float p2){
+                    b[n] = p0 - 2.0f * p1 + p2;
+                    c[n] = -3.0f * p0 + 4.0f * p1 - p2;
+                    d[n] = 2.0f * p0;
+                };
+                auto LastCal = [&](int n, float p0, float p1, float p2){
+                    b[n] = p0 - 2.0f * p1 + p2;
+                    c[n] = -p0 + p2;
+                    d[n] = 2.0f * p1;
+                };
+                if(counter == 0){
+                    FirstCal(0, transit_point.at(counter).x, transit_point.at(counter + 1).x, transit_point.at(counter + 2).x);
+                    FirstCal(1, transit_point.at(counter).y, transit_point.at(counter + 1).y, transit_point.at(counter + 2).y);
+                }else if(counter == transit_point.size() - 2){
+                    LastCal(0, transit_point.at(counter - 1).x, transit_point.at(counter).x, transit_point.at(counter + 1).x);
+                    LastCal(1, transit_point.at(counter - 1).y, transit_point.at(counter).y, transit_point.at(counter + 1).y);
                 }else{
-                    //一般経路
-                    CatmullRom(route_counter);
+                    NomalCal(0, transit_point.at(counter - 1).x, transit_point.at(counter).x, transit_point.at(counter + 1).x, transit_point.at(counter + 2).x);
+                    NomalCal(1, transit_point.at(counter - 1).y, transit_point.at(counter).y, transit_point.at(counter + 1).y, transit_point.at(counter + 2).y);
                 }
+                for(int i = 0; i < frequency; ++i){
+                    float t = static_cast<float>(i) / frequency;
+                    float temp[2];
+                    for(int k = 0; k < 2; ++k){
+                        if(counter == 0){
+                            temp[k] = 0.5f * ((b[k] * t * t) + (c[k] * t) + d[k]);
+                        }else if(counter == transit_point.size() - 2){
+                            temp[k] = 0.5f * ((b[k] * t * t) + (c[k] * t) + d[k]);
+                        }else{
+                            temp[k] = 0.5f * ((a[k] * t * t * t) + (b[k] * t * t) + (c[k] * t) + d[k]);
+                        }
+                    }
+                    //x, yをそれぞれ入れる
+                    Vector2f Pos(temp[0], temp[1]);
+                    goal_point.push_back(Pos);
+                    //区間距離を計算
+                    cal_L += std::sqrt(Pos(0) * Pos(0) + Pos(1) * Pos(1));
+                }
+                queue_L_total.push(cal_L);
             }
             std::ofstream outputFile("Route.txt");
             for(auto &point : goal_point){outputFile << std::fixed << std::setprecision(5) << point(0) << " " << point(1) << "\n";}
@@ -80,97 +113,6 @@ class CatmullRomSpline{
             queue_angle.pop();
             return info;
         }
-        //リアルタイムで計算しているので係数だけコンストラクタで計算した方がいいかも
-        void CatmullRom(const int counter){
-               //始点を通過する曲線
-            float cal_L{};
-            auto FirstCal = [&](int n, float p0, float p1, float p2, float p3){
-                a[n] = -p0 + 3.0f * p1 - 3.0f * p2 + p3;
-                b[n] = 2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3;
-                c[n] = -p0 + p2;
-                d[n] = 2.0f * p1;
-            };
-            for(int k = 0; k < 2; ++k){
-                cout << "nomal " << a[k] << " " << b[k] << " " << c[k] << " " << d[k] << " " << endl;
-            }
-            FirstCal(0, transit_point.at(counter - 1).x, transit_point.at(counter).x, transit_point.at(counter + 1).x, transit_point.at(counter + 2).x);
-            FirstCal(1, transit_point.at(counter - 1).y, transit_point.at(counter).y, transit_point.at(counter + 1).y, transit_point.at(counter + 2).y);
-
-            for(int i = 0; i < frequency; ++i){
-                //x, yに分けて計算する
-                float t = static_cast<float>(i) / frequency;
-                float temp[2];
-                for(int k = 0; k < 2; ++k){
-                    temp[k] = 0.5f * ((a[k] * t * t * t) + (b[k] * t * t) + (c[k] * t) + d[k]);
-                }
-                //x, yをそれぞれ入れる
-                Vector2f Pos(temp[0], temp[1]);
-                goal_point.push_back(Pos);
-                //区間距離を計算
-                cal_L += std::sqrt(Pos(0) * Pos(0) + Pos(1) * Pos(1));
-            }            
-            queue_L_total.push(cal_L);
-        }
-        void CatmullRomFirst(const int counter){
-            //始点を通過する曲線
-            float cal_L{};
-            auto FirstCal = [&](int n, float p0, float p1, float p2){
-                b[n] = p0 - 2.0f * p1 + p2;
-                c[n] = -3.0f * p0 + 4.0f * p1 - p2;
-                d[n] = 2.0f * p0;
-            };
-            for(int k = 0; k < 2; ++k){
-                cout << "first " << b[k] << " " << c[k] << " " << d[k] << " " << endl;
-            }
-            FirstCal(0, transit_point.at(counter).x, transit_point.at(counter + 1).x, transit_point.at(counter + 2).x);
-            FirstCal(1, transit_point.at(counter).y, transit_point.at(counter + 1).y, transit_point.at(counter + 2).y);
-
-            for(int i = 0; i < frequency; ++i){
-                //x, yに分けて計算する
-                float t = static_cast<float>(i) / frequency;
-                float temp[2];
-                for(int k = 0; k < 2; ++k){
-                    temp[k] = 0.5f * ((b[k] * t * t) + (c[k] * t) + d[k]);
-                }
-                //x, yをそれぞれ入れる
-                Vector2f Pos(temp[0], temp[1]);
-                goal_point.push_back(Pos);
-                //区間距離を計算
-                cal_L += std::sqrt(Pos(0) * Pos(0) + Pos(1) * Pos(1));
-            }
-            queue_L_total.push(cal_L);
-        }
-        void CatmullRomLast(const int counter){
-            //始点を通過;する曲線
-            float cal_L{};
-            auto FirstCal = [&](int n, float p0, float p1, float p2){
-                b[n] = p0 - 2.0f * p1 + p2;
-                c[n] = -p0 + p2;
-                d[n] = 2.0f * p1;
-            };
-            for(int k = 0; k < 2; ++k){
-                cout << "last = " << b[k] << " " << c[k]  << " " << d[k]  << " " << endl;
-            }
-            //違う可能性大
-            FirstCal(0, transit_point.at(counter - 1).x, transit_point.at(counter).x, transit_point.at(counter + 1).x);
-            FirstCal(1, transit_point.at(counter - 1).y, transit_point.at(counter).y, transit_point.at(counter + 1).y);
-
-            for(int i = 1; i <= frequency; ++i){
-                //x, yに分けて計算する
-                float t = static_cast<float>(i) / frequency;
-                float temp[2];
-                cout << t << endl;
-                for(int k = 0; k < 2; ++k){
-                    temp[k] = 0.5f * ((b[k] * t * t) + (c[k] * t) + d[k]);
-                }
-                //x, yをそれぞれ入れる
-                Vector2f Pos(temp[0], temp[1]);
-                goal_point.push_back(Pos);
-                //区間距離を計算
-                cal_L += std::sqrt(Pos(0) * Pos(0) + Pos(1) * Pos(1));
-            }
-            queue_L_total.push(cal_L);
-        }
     private:
         std::vector<float> transit_theta;
         std::vector<Vector2f> goal_point;
@@ -178,10 +120,8 @@ class CatmullRomSpline{
         std::queue<float> queue_L_total;
         std::queue<float> queue_angle;
         int frequency;
-        float a[2];
-        float b[2];
-        float c[2];
-        float d[2];
+        float a[2], b[2], c[2], d[2];
+        float cal_L;
 };
 enum class Coat{
   red1,
