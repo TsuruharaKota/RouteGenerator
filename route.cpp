@@ -5,7 +5,7 @@
 #include<tuple>
 #include<fstream>
 #include<string>
-#include<Eigen/Dense>
+#include<eigen3/Dense>
 #include<vector>
 #include<cmath>
 #include<iomanip>
