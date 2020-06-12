@@ -62,22 +62,25 @@ class CatmullRomSpline{
                     c[n] = -p0 + p2;
                     d[n] = 2.0f * p1;
                 };
-                auto FirstCal = [&](int n, float p0, float p1, float p2){
-                    b[n] = p0 - 2.0f * p1 + p2;
-                    c[n] = -3.0f * p0 + 4.0f * p1 - p2;
-                    d[n] = 2.0f * p0;
-                };
-                auto LastCal = [&](int n, float p0, float p1, float p2){
-                    b[n] = p0 - 2.0f * p1 + p2;
-                    c[n] = -p0 + p2;
-                    d[n] = 2.0f * p1;
+                auto ExceptionCal = [&](int n, float p0, float p1, float p2){
+                    if(counter == 0){
+                        //First Curve
+                        b[n] = p0 - 2.0f * p1 + p2;
+                        c[n] = -3.0f * p0 + 4.0f * p1 - p2;
+                        d[n] = 2.0f * p0;
+                    }else{
+                        //Last Curve
+                        b[n] = p0 - 2.0f * p1 + p2;
+                        c[n] = -p0 + p2;
+                        d[n] = 2.0f * p1;
+                    }
                 };
                 if(counter == 0){
-                    FirstCal(0, transit_point.at(counter).x, transit_point.at(counter + 1).x, transit_point.at(counter + 2).x);
-                    FirstCal(1, transit_point.at(counter).y, transit_point.at(counter + 1).y, transit_point.at(counter + 2).y);
+                    ExceptionCal(0, transit_point.at(counter).x, transit_point.at(counter + 1).x, transit_point.at(counter + 2).x);
+                    ExceptionCal(1, transit_point.at(counter).y, transit_point.at(counter + 1).y, transit_point.at(counter + 2).y);
                 }else if(counter == transit_point.size() - 2){
-                    LastCal(0, transit_point.at(counter - 1).x, transit_point.at(counter).x, transit_point.at(counter + 1).x);
-                    LastCal(1, transit_point.at(counter - 1).y, transit_point.at(counter).y, transit_point.at(counter + 1).y);
+                    ExceptionCal(0, transit_point.at(counter - 1).x, transit_point.at(counter).x, transit_point.at(counter + 1).x);
+                    ExceptionCal(1, transit_point.at(counter - 1).y, transit_point.at(counter).y, transit_point.at(counter + 1).y);
                 }else{
                     NomalCal(0, transit_point.at(counter - 1).x, transit_point.at(counter).x, transit_point.at(counter + 1).x, transit_point.at(counter + 2).x);
                     NomalCal(1, transit_point.at(counter - 1).y, transit_point.at(counter).y, transit_point.at(counter + 1).y, transit_point.at(counter + 2).y);
