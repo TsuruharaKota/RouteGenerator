@@ -55,6 +55,11 @@ class CatmullRomSpline{
         }
         std::vector<Vector4f> operator()(){
             //始点通過、終点通過、一般経路を分類
+            int angle_count = 0;
+            float x_prev = 0;
+            float y_prev = 0;
+            float angle_prev = 0;
+            float angle_sum = 0;
             for(int counter = 0; counter < transit_point.size() - 1; ++counter){
                 cal_L = 0;
                 auto NomalCal = [&](int n, float p0, float p1, float p2, float p3){
@@ -106,7 +111,16 @@ class CatmullRomSpline{
                     //x, yをそれぞれ入れる
                     //ここでvector4fにしたい
                     //x座標が距離でy座標が速度
-                    temp[3] = atan2(temp[1] - y_prev , temp[0] - x_prev);
+                    angle_sum += atan2(temp[1] - y_prev, temp[0] - x_prev);
+                    if(angle_count >= 9){
+                        temp[3] = angle_sum / 10;
+                        angle_prev = temp[3];  
+                        angle_count = 0;
+                        angle_sum = 0; 
+                    }else{
+                        temp[3] = angle_prev;
+                        ++angle_count;
+                    }
                     Vector4f Pos(temp[0], temp[1], temp[2], temp[3]);
                     goal_point.push_back(Pos);
                     x_prev = temp[0];
@@ -116,7 +130,7 @@ class CatmullRomSpline{
             }
             //この時点で座標は生成できている
             std::ofstream outputFile("Route.txt");
-            for(auto &point : goal_point){outputFile << std::fixed << std::setprecision(5) << point(0) << " " << point(1) << "\n";}
+            for(auto &point : goal_point){outputFile << std::fixed << std::setprecision(5) << point(0) << " " << point(1) << " " << point(2) << " " << point(3) * (180 / M_PI) << "\n";}
             outputFile.close();
             return goal_point;
         }
@@ -135,8 +149,6 @@ class CatmullRomSpline{
         std::queue<float> queue_angle;
         int frequency;
         float a[3], b[3], c[3], d[3];
-        float x_prev;
-        float y_prev;
         float cal_L;
 };
 
@@ -204,10 +216,10 @@ std::vector<route_tuple> routeInit(){
 
 int main(int argc, char **argv){
     //経路の生成
-    CatmullRomSpline splineObject(routeInit<Coat::red1>(), 100);
+    CatmullRomSpline splineObject(routeInit<Coat::red1>(), 1000);
     std::vector<Vector4f> route_info = splineObject();
     
     for(auto pos:route_info){
-        std::cout << pos(0) << " " << pos(1) << " " << pos(2) << " " << pos(3) << std::endl;
+        //std::cout << pos(0) << " " << pos(1) << " " << pos(2) << " " << pos(3) << std::endl;
     }
 }
